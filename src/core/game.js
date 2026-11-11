@@ -218,6 +218,9 @@ export class VelaraGame {
         break;
       }
       case 'recoverCar': this.recoverCar(); break;
+      case 'debugToggle':
+        this.ui.toggleDebug();
+        break;
       case 'qualityCycle': {
         const cfg = this.quality.cycle();
         this.ui.toast(`Graphics: ${cfg.label}`);
@@ -482,6 +485,22 @@ export class VelaraGame {
       this.postfx.composer.render();
     } else {
       this.renderer.render(this.scene, this.camera);
+    }
+    // ---- F3 debug overlay (0.25s cadence, render ke baad — info frame ka) ----
+    this._dbgT = (this._dbgT || 0) + dt;
+    if (this._dbgT > 0.25 && this.ui.debugEl && this.ui.debugEl.style.display === 'block') {
+      this._dbgT = 0;
+      const inf = this.renderer.info;
+      const mem = performance.memory ? `${(performance.memory.usedJSHeapSize / 1048576).toFixed(0)}MB` : 'n/a';
+      const cs = this.city.chunkStats();
+      const ps = this.peds.stats();
+      this.ui.updateDebug([
+        `FPS ${this.quality.fps.toFixed(0)} | ${this.quality.config.label} | view ${this.quality.config.viewDist || 260}m`,
+        `draws ${inf.render.calls} | tris ${(inf.render.triangles / 1000).toFixed(0)}k`,
+        `geoms ${inf.memory.geometries} | tex ${inf.memory.textures} | heap ${mem}`,
+        `chunks ${cs.visible}/${cs.total} | peds ${ps.count} (${ps.walking}w/${ps.panicking}p/${ps.down}d)`,
+        `traffic ${this.traffic.cars.length} | metro ${this.city.metroPos().toFixed(0)}m`,
+      ]);
     }
   }
 

@@ -96,6 +96,9 @@ const CSS = `
     transition: opacity 0.15s ease; }
 
   /* ---------- pause ---------- */
+  #v-debug { position: absolute; top: 8px; left: 10px; font: 10px/1.55 monospace;
+    color: #9fe8b0; background: rgba(4,10,8,0.74); padding: 6px 10px; border-radius: 6px;
+    white-space: pre; display: none; pointer-events: none; z-index: 40; }
   #v-pause { position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
     pointer-events: auto; background: rgba(4, 7, 13, 0.78); backdrop-filter: blur(4px); }
   #v-pause .box { text-align: center; }
@@ -237,6 +240,9 @@ export class UI {
           <h2>PAUSE</h2>
           <button id="v-resume">RESUME</button>
           <button id="v-restart">RESTART GAME</button>
+          <div style="margin-top:18px;font-size:10px;color:#8fa3bf;letter-spacing:.08em">
+            ASSETS: ambientCG (CC0) + procedural — poora list: ASSETS.md
+          </div>
         </div>
       </div>
 
@@ -269,6 +275,7 @@ export class UI {
     this.pauseEl = this.$('v-pause');
     this.damageEl = this.$('v-damage');
     this.minimap = this.$('v-minimap');
+    this.debugEl = this.$('v-debug');
     this.mctx = this.minimap.getContext('2d');
     this.touchEl = this.$('v-touch');
     this.weaponEl = this.$('v-weapon');
@@ -401,6 +408,15 @@ export class UI {
     this.hitmarkerEl.style.opacity = '1';
     clearTimeout(this._hitmarkT);
     this._hitmarkT = setTimeout(() => { this.hitmarkerEl.style.opacity = '0'; }, 110);
+  }
+
+  // ------------------------------------------------------------- debug overlay (F3)
+  toggleDebug() {
+    this.debugEl.style.display = this.debugEl.style.display === 'block' ? 'none' : 'block';
+  }
+
+  updateDebug(lines) {
+    if (this.debugEl.style.display === 'block') this.debugEl.textContent = lines.join('\n');
   }
 
   // ------------------------------------------------------------- minimap

@@ -212,16 +212,18 @@ export function buildCity(scene, world) {
         }
       }
     }
-    // visual pass v1: photoreal facade tile (windows glow via emissiveMap)
-    const map = texLoader.load('textures/facade.jpg');
-    const emissive = map.clone();
-    emissive.needsUpdate = true;
-    for (const t of [map, emissive]) {
+    // licence-clean procedural facade (master-spec rule 5c): canvas map +
+    // alag emissive canvas — raat mein sirf khidkiyan jalti hain, deewar nahi.
+    const mkTex = (cnv) => {
+      const t = new THREE.CanvasTexture(cnv);
       t.wrapS = t.wrapT = THREE.RepeatWrapping;
       t.repeat.set(2, Math.max(3, Math.round(rows / 2)));
       t.colorSpace = THREE.SRGBColorSpace;
       t.anisotropy = 4;
-    }
+      return t;
+    };
+    const map = mkTex(mapC);
+    const emissive = mkTex(emiC);
     const mat = new THREE.MeshStandardMaterial({
       map, emissiveMap: emissive, emissive: 0xffffff, emissiveIntensity: 0.75,
       roughness: 0.82, metalness: 0.12,

@@ -19,6 +19,7 @@ export class InputManager {
       KeyM: 'musicToggle',
       KeyT: 'recoverCar',
       KeyK: 'qualityCycle',
+      F3: 'debugToggle',
       Digit1: 'weapon1',
       Digit2: 'weapon2',
       Digit3: 'weapon3',
@@ -28,7 +29,7 @@ export class InputManager {
     };
 
     window.addEventListener('keydown', (e) => {
-      if (e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
+      if (e.code === 'Space' || e.code.startsWith('Arrow') || e.code === 'F3') e.preventDefault();
       if (e.repeat) return;
       this.keys[e.code] = true;
       if (ACTION_MAP[e.code]) {
