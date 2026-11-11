@@ -302,7 +302,12 @@ const rstate = await page.evaluate(() => {
 });
 console.log('13. after restart:', JSON.stringify(s), JSON.stringify(rstate));
 
+// 14. pedestrians: spawned + state split
+const pedInfo = await page.evaluate(() => window.velara.peds.stats());
+console.log('14. pedestrians:', JSON.stringify(pedInfo), '-> spawned:', pedInfo.count > 0, '| states add up:', (pedInfo.walking + pedInfo.panicking + pedInfo.down) === pedInfo.count);
+
 console.log('--- console errors:', errors.length);
 for (const e of errors.slice(0, 10)) console.log('  ERR:', e.slice(0, 250));
 await browser.close();
 console.log(errors.length === 0 ? '\nSMOKE TEST PASSED ✅' : '\nSMOKE TEST HAD ERRORS ❌');
+process.exitCode = errors.length === 0 ? 0 : 1; // CI gate: errors = red cross

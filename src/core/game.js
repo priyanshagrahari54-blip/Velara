@@ -10,6 +10,7 @@ import { CameraRig } from '../engine/camera.js';
 import { createEnvironment } from '../world/environment.js';
 import { buildCity, EXTENT } from '../world/city.js';
 import { TrafficSystem } from '../world/traffic.js';
+import { PedestrianSystem } from '../world/pedestrians.js';
 
 import { Player } from '../gameplay/player.js';
 import { GameVehicle, VEHICLE_PRESETS, getVehiclePhysMat } from '../gameplay/vehicle.js';
@@ -85,6 +86,15 @@ export class VelaraGame {
     this._applyActiveVehicle();
 
     this.traffic = new TrafficSystem(this.scene, this.world, this.city.ROADS, EXTENT);
+    // pedestrians: sidewalk NPCs — panic on gunfire, knockdown by cars,
+    // recycle around player (GTA-style density). g560 = 10 peds, else 22.
+    this.peds = new PedestrianSystem(
+      this.scene, this.city.ROADS, EXTENT, this._panicPoints,
+      () => (this.activeVehicle
+        ? { x: this.activeVehicle.body.position.x, z: this.activeVehicle.body.position.z,
+            speedKmh: Math.abs(this.activeVehicle.getSpeedKmh()) }
+        : { x: this.player.position.x, z: this.player.position.z, speedKmh: 0 }),
+      this.profile === 'g560' ? 10 : 22);
     this.world.addContactMaterial(new CANNON.ContactMaterial(
       getVehiclePhysMat(), this.traffic.trafficMat, { friction: 0.2, restitution: 0.05 }));
 
@@ -434,6 +444,7 @@ export class VelaraGame {
     this.money = 0; this.health = 100;
     this.pickupsCollected = 0; this.cratesDestroyed = 0; this.rangeHits = 0;
     this.city.resetProps();
+    this.peds.reset();
     this.range.reset();
     this.weapons.state.forEach((s, i) => { s.mag = WEAPONS[i].magSize; s.reserve = WEAPONS[i].reserveMax; });
     this.weapons.index = -1;            // force re-select to slot 1
@@ -582,6 +593,9 @@ export class VelaraGame {
       else avoid.push({ x: pp.x, z: pp.z });
     }
     this.traffic.update(dt, avoid);
+
+    // ---------------------------------------------------- pedestrians
+    this.peds.update(dt);
 
     // -------------------------------------------------------- environment
     this.env.update(dt, this.camera);

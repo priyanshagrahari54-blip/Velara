@@ -1,9 +1,6 @@
 name: Screenshot Farm
 on:
-  workflow_dispatch:
-  push:
-    branches: [main]
-    paths: ['src/**', 'test/shot-farm.mjs']
+  workflow_dispatch: {}   # manual only — heavy QA parallel me chalta hai
 jobs:
   farm:
     runs-on: ubuntu-latest

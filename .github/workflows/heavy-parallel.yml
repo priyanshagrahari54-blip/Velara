@@ -1,0 +1,38 @@
+name: Heavy Parallel QA
+on:
+  push:
+    branches: [main]
+    paths: ['src/**', 'test/**', 'tools/**', 'package.json']
+jobs:
+  matrix:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [physics, smoke, g560, stress]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install --no-audit --no-fund
+      - name: Physics suites (pure cannon — no browser)
+        if: matrix.suite == 'physics'
+        run: node test/final-check.mjs && node test/cone-test.mjs && node test/player-test.mjs
+      - name: Install chromium (browser suites)
+        if: matrix.suite != 'physics'
+        run: npx playwright install --with-deps chromium
+      - name: Boot dev server
+        if: matrix.suite != 'physics'
+        run: |
+          npx vite --port 3000 --host 127.0.0.1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:3000/ >/dev/null && break; sleep 1; done
+          curl -sf http://localhost:3000/ >/dev/null || { echo "dev server failed"; exit 1; }
+      - name: Suite — full smoke (M1-M5 + peds, 0 errors)
+        if: matrix.suite == 'smoke'
+        run: node test/browser-smoke.mjs
+      - name: Suite — G560 max-speed tier check
+        if: matrix.suite == 'g560'
+        run: node test/g560-check.mjs
+      - name: Suite — 2-minute stress (FPS + memory + leaks)
+        if: matrix.suite == 'stress'
+        run: node test/stress-run.mjs
