@@ -405,8 +405,8 @@ def render_preview():
 
     world = bpy.data.worlds.new("Night")
     world.use_nodes = True
-    wout = next(n for n in world.node_tree.nodes if n.type == "ShaderNodeOutputWorld")
-    wbg = next(n for n in world.node_tree.nodes if n.type == "Background")
+    wout = next(n for n in world.node_tree.nodes if n.type == "OUTPUT_WORLD")
+    wbg = next(n for n in world.node_tree.nodes if n.type == "BACKGROUND")
     set_input(wbg, ["Color"], (0.004, 0.005, 0.009, 1.0))
     vol = world.node_tree.nodes.new("ShaderNodeVolumePrincipled")
     set_input(vol, ["Density"], 0.010)
@@ -415,7 +415,13 @@ def render_preview():
 
     dev = setup_cycles(samples=A["samples"])
     R["device"] = dev
-    scene.cycles.use_denoising = True
+    try:
+        scene.cycles.use_denoising = True          # 3.x style
+    except AttributeError:
+        try:
+            bpy.context.view_layer.cycles.use_denoising = True   # 4.x view-layer
+        except Exception:
+            pass                                   # denoise ke bina bhi chalega
     scene.render.resolution_x = A["rx"]
     scene.render.resolution_y = A["ry"]
     scene.render.filepath = PNG
