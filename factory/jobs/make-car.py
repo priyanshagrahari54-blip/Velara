@@ -270,11 +270,16 @@ def build():
     wheel_mat.use_nodes = True
     wb = wheel_mat.node_tree.nodes["Principled BSDF"]
     set_input(wb, ["Roughness"], 0.85)
-    nvc = wheel_mat.node_tree.nodes.new("ShaderNodeColorAttribute")
-    if "Attribute" in nvc.inputs:
-        nvc.inputs["Attribute"].default_value = "Col"
-    else:
-        nvc.attribute_name = "Col"
+    nvc = None
+    try:
+        nvc = wheel_mat.node_tree.nodes.new("ShaderNodeColorAttribute")
+        if "Attribute" in nvc.inputs:
+            nvc.inputs["Attribute"].default_value = "Col"
+        else:
+            nvc.attribute_name = "Col"
+    except RuntimeError:   # 4.5: purana naam
+        nvc = wheel_mat.node_tree.nodes.new("ShaderNodeVertexColor")
+        nvc.layer_name = "Col"
     wheel_mat.node_tree.links.new(nvc.outputs["Color"], wb.inputs["Base Color"])
 
     def col_geo(mesh, rgb255):
