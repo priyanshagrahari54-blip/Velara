@@ -278,7 +278,7 @@ def bake_normal():
     lamp.select_set(True)
     bpy.context.view_layer.objects.active = lamp
     bpy.ops.object.bake(type="NORMAL", use_selected_to_active=True,
-                        ray_distance=0.06, margin=8, use_clear=True)
+                        max_ray_distance=0.06, margin=8, use_clear=True)
     img.filepath = N_PNG
     img.save()
     globals()["IMG_N"] = img
@@ -300,7 +300,7 @@ def bake_ao():
     lamp.select_set(True)
     bpy.context.view_layer.objects.active = lamp
     bpy.ops.object.bake(type="AO", use_selected_to_active=True,
-                        ray_distance=0.9, margin=8, use_clear=True)
+                        max_ray_distance=0.9, margin=8, use_clear=True)
     # AO ko base-color se tint karo -> seedha Base Color wire (exporter-clean)
     arr = np.asarray(img.pixels[:], dtype=np.float32).reshape(-1, 4)
     arr[:, 0] *= BASE_COLOR[0]
