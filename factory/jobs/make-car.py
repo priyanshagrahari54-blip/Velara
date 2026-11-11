@@ -284,14 +284,14 @@ def build():
 
     def col_geo(mesh, rgb255):
         """Mesh par 'Col' float-color attribute (RGBA) — tire/rim ke liye."""
-        n = mesh.attributes.position.count
+        n = len(mesh.vertices)
         arr = np.zeros((n, 4), dtype=np.float32)
         arr[:, 0] = rgb255[0] / 255.0
         arr[:, 1] = rgb255[1] / 255.0
         arr[:, 2] = rgb255[2] / 255.0
         arr[:, 3] = 1.0
-        mesh.attributes.new("Col", 'FLOAT_COLOR', 'POINT')
-        mesh.attributes["Col"].data.foreach_set('value', arr.ravel())
+        ca = mesh.attributes.new("Col", 'FLOAT_COLOR', 'POINT')
+        ca.data.foreach_set('value', arr.ravel())
         return mesh
 
     def wheel_at(name, x, y):
