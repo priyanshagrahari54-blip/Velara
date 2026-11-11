@@ -1,8 +1,13 @@
 {
-    "id": "neon-sign",
-    "script": "make-neon-sign.py",
-    "args": [],
-    "brief": "Neon signboard prop \u2014 night phase ke liye (Image-1 look).",
-    "status": "pending",
-    "priority": 3
+ "id": "neon-sign",
+ "script": "make-neon-sign.py",
+ "args": [],
+ "brief": "Neon signboard prop \u2014 night phase ke liye (Image-1 look).",
+ "status": "done",
+ "priority": 3,
+ "worker": "actions-cpu",
+ "claimed": 1794411764,
+ "result": "factory/out/neon-sign.glb",
+ "bytes": 13360,
+ "sha256": "7cace99b308f4ba1"
 }

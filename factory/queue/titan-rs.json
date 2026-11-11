@@ -1,10 +1,15 @@
 {
-    "id": "titan-rs",
-    "script": "make-car.py",
-    "args": [
-        "titan-rs"
-    ],
-    "brief": "Titan RS \u2014 muscle sedan, deep blue, long hood.",
-    "status": "pending",
-    "priority": 2
+ "id": "titan-rs",
+ "script": "make-car.py",
+ "args": [
+  "titan-rs"
+ ],
+ "brief": "Titan RS \u2014 muscle sedan, deep blue, long hood.",
+ "status": "done",
+ "priority": 2,
+ "worker": "actions-cpu",
+ "claimed": 1794411764,
+ "result": "factory/out/titan-rs.glb",
+ "bytes": 44780,
+ "sha256": "0a8ab927d82a12bc"
 }

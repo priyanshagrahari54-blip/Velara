@@ -1,10 +1,15 @@
 {
-    "id": "colossus-v",
-    "script": "make-car.py",
-    "args": [
-        "colossus-v"
-    ],
-    "brief": "Colossus V \u2014 full-size SUV, dark green, roof rails.",
-    "status": "pending",
-    "priority": 2
+ "id": "colossus-v",
+ "script": "make-car.py",
+ "args": [
+  "colossus-v"
+ ],
+ "brief": "Colossus V \u2014 full-size SUV, dark green, roof rails.",
+ "status": "done",
+ "priority": 2,
+ "worker": "actions-cpu",
+ "claimed": 1794411764,
+ "result": "factory/out/colossus-v.glb",
+ "bytes": 44928,
+ "sha256": "df94a4c237d0f8a3"
 }

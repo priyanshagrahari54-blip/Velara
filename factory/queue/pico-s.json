@@ -1,10 +1,15 @@
 {
-    "id": "pico-s",
-    "script": "make-car.py",
-    "args": [
-        "pico-s"
-    ],
-    "brief": "Pico S \u2014 compact hatchback, warm yellow, city runabout.",
-    "status": "pending",
-    "priority": 1
+ "id": "pico-s",
+ "script": "make-car.py",
+ "args": [
+  "pico-s"
+ ],
+ "brief": "Pico S \u2014 compact hatchback, warm yellow, city runabout.",
+ "status": "done",
+ "priority": 1,
+ "worker": "actions-cpu",
+ "claimed": 1794411764,
+ "result": "factory/out/pico-s.glb",
+ "bytes": 44856,
+ "sha256": "382a843bd5f9133e"
 }
