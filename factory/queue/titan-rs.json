@@ -1,0 +1,10 @@
+{
+    "id": "titan-rs",
+    "script": "make-car.py",
+    "args": [
+        "titan-rs"
+    ],
+    "brief": "Titan RS \u2014 muscle sedan, deep blue, long hood.",
+    "status": "pending",
+    "priority": 2
+}

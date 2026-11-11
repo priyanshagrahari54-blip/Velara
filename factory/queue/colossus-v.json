@@ -1,0 +1,10 @@
+{
+    "id": "colossus-v",
+    "script": "make-car.py",
+    "args": [
+        "colossus-v"
+    ],
+    "brief": "Colossus V \u2014 full-size SUV, dark green, roof rails.",
+    "status": "pending",
+    "priority": 2
+}

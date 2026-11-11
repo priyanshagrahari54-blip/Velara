@@ -1,0 +1,8 @@
+{
+    "id": "neon-sign",
+    "script": "make-neon-sign.py",
+    "args": [],
+    "brief": "Neon signboard prop \u2014 night phase ke liye (Image-1 look).",
+    "status": "pending",
+    "priority": 3
+}

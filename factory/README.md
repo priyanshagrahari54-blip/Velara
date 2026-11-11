@@ -1,4 +1,31 @@
-# VELARA Asset Factory (Codespace + Blender headless)
+# VELARA Design Team (Asset Factory)
+
+**Team (DM + 4 designers):**
+| Worker | Role | Autonomy |
+|--------|------|----------|
+| sandbox (DM) | queuebharta, verify, ASSETS.md, game-integrate | har turn |
+| **actions-cpu** (designer.yml) | Blender CPU, unlimited, **24/7 cron (6-hourly)** | poori — khud commit [skip ci] |
+| **colab-gpu** (notebook) | T4 heavy bakes (2048px) | GHTOKEN secret ho to khud push, warna tmate-pull |
+| **kaggle-gpu** (kaggle/VELARA-Designer.ipynb) | P100/T4x2 | GHTOKEN secret se khud push |
+| **codespace** | interactive debug + heavy jobs | assistant ssh se |
+
+**Queue system:** `factory/queue/<id>.json` — {id, script, args, brief, status, priority}.
+`pending -> running (claim) -> done/failed`. Results `factory/out/` mein, workers khud
+commit karte hain (`[skip ci]`), DM review karke `public/assets/` + game mein integrate karta hai.
+
+**Dispatch (DM se):**
+```bash
+TOKEN=$(tr -d '[:space:]' < .ghtoken)
+# manual: specific jobs
+curl -s -X POST -H "Authorization: Bearer $TOKEN"   "https://api.github.com/repos/priyanshagrahari54-blip/Velara/actions/workflows/designer.yml/dispatches"   -d '{"ref":"main","inputs":{"jobs":"velara-gt,pico-s"}}'
+# ya "next" (queue se 2): -d '{"ref":"main","inputs":{"jobs":"next","count":"2"}}'
+```
+Cron khud har 6 ghante queue dekhta hai — pending ho to process (24/7 team).
+
+**Naya job add karna:** `factory/queue/<id>.json` banao (status:"pending") + script
+`factory/jobs/make-*.py` — commit+push. Bas.
+
+*(Purana codespace runbook neeche hai — ab wo bhi isi queue ko use karta hai.)*
 
 Codespace = **heavy-kaam worker**: Blender 4.5 LTS (headless, CPU) wahan
 high-quality 3D assets banata hai — model → AO bake → Draco GLB — aur

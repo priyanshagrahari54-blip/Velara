@@ -1,0 +1,10 @@
+{
+    "id": "pico-s",
+    "script": "make-car.py",
+    "args": [
+        "pico-s"
+    ],
+    "brief": "Pico S \u2014 compact hatchback, warm yellow, city runabout.",
+    "status": "pending",
+    "priority": 1
+}

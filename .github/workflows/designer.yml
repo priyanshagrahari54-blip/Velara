@@ -1,0 +1,136 @@
+name: Designer Team
+
+# ---------------------------------------------------------------------------
+# VELARA design team ka Actions worker: Blender (headless) se queue ke pending
+# jobs process karta hai aur results + queue-status khud commit karta hai.
+# - Manual: workflow_dispatch (jobs="velara-gt,pico-s" ya "next")
+# - 24/7: har 6 ghante cron khud queue uthata hai (pending ho to)
+# - Commits [skip ci] ke saath — CI loops nahi
+# ---------------------------------------------------------------------------
+on:
+  workflow_dispatch:
+    inputs:
+      jobs:
+        description: 'job ids comma-sep, ya "next" (queue se)'
+        required: false
+        default: 'next'
+      count:
+        description: '"next" ho to kitne jobs uthaon'
+        required: false
+        default: '2'
+  schedule:
+    - cron: '17 */6 * * *'   # UTC — har 6 ghante queue check (24/7 team)
+
+permissions:
+  contents: write
+
+concurrency:
+  group: designer-team
+  cancel-in-progress: false
+
+jobs:
+  blender-designer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Blender 4.5.16 (headless)
+        run: |
+          sudo apt-get update -qq || true
+          sudo apt-get install -y -qq libx11-6 libxi6 libxxf86vm1 libxfixes3 libxrender1 \
+            libgl1 libxkbcommon0 libsm6 libice6 xz-utils 2>/dev/null || \
+          echo "apt degraded — core libs pehle se hain, aage badhte hain"
+          if [ ! -x /opt/blender/blender ]; then
+            curl -fsSL --retry 3 -o /tmp/b.tar.xz \
+              https://download.blender.org/release/Blender4.5/blender-4.5.16-linux-x64.tar.xz
+            sudo mkdir -p /opt/blender
+            sudo tar -xJf /tmp/b.tar.xz -C /opt/blender --strip-components=1
+          fi
+          /opt/blender/blender --version | head -1
+
+      - name: Resolve + claim jobs from queue
+        id: resolve
+        run: |
+          python3 - <<'PYRESOLVE'
+          import json, os, time, glob
+          sel = os.environ.get("SEL", "next")
+          cnt = int(os.environ.get("CNT", "2"))
+          picked = []
+          files = sorted(glob.glob("factory/queue/*.json"))
+          jobs = [(f, json.load(open(f))) for f in files]
+          now = time.time()
+          if sel and sel != "next":
+              ids = [x.strip() for x in sel.split(",") if x.strip()]
+              picked = [(f, j) for f, j in jobs
+                        if j["id"] in ids and j.get("status") in ("pending", "failed", "running")
+                        and (j.get("status") != "running" or now - j.get("claimed", 0) > 1800)]
+          else:
+              pend = [(f, j) for f, j in jobs
+                      if j.get("status") == "pending"
+                      or (j.get("status") == "running" and now - j.get("claimed", 0) > 1800)]
+              pend.sort(key=lambda fj: (fj[1].get("priority", 5), fj[1]["id"]))
+              picked = pend[:cnt]
+          for f, j in picked:
+              j["status"] = "running"
+              j["worker"] = "actions-cpu"
+              j["claimed"] = int(now)
+              json.dump(j, open(f, "w"), indent=1)
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write("count=" + str(len(picked)) + "\n")
+              out.write("jobfiles<<RESOLVE_EOF\n")
+              for f, j in picked:
+                  out.write(f"{f}|{j['script']}|{','.join(j.get('args', []))}|{j['id']}\n")
+              out.write("RESOLVE_EOF\n")
+          print("claimed:", [(j["id"], j.get("status")) for _, j in picked])
+          PYRESOLVE
+        env:
+          SEL: ${{ github.event.inputs.jobs || 'next' }}
+          CNT: ${{ github.event.inputs.count || '2' }}
+
+      - name: Run Blender jobs
+        if: steps.resolve.outputs.count != '0'
+        run: |
+          echo "${{ steps.resolve.outputs.jobfiles }}" > /tmp/joblist.txt
+          : > /tmp/results.txt
+          while IFS='|' read -r qf script args jid; do
+            [ -z "$jid" ] && continue
+            echo "=== designing: $jid ($script $args) ==="
+            if /opt/blender/blender --background --python "factory/jobs/$script" -- $args \
+               && /opt/blender/blender --background --python factory/verify-glb.py -- "factory/out/$jid.glb"; then
+              echo "$qf|$jid|done" >> /tmp/results.txt
+            else
+              echo "$qf|$jid|failed" >> /tmp/results.txt
+            fi
+          done < /tmp/joblist.txt
+          cat /tmp/results.txt
+
+      - name: Update queue + commit results
+        if: steps.resolve.outputs.count != '0'
+        run: |
+          if [ -f /tmp/results.txt ]; then
+            while IFS='|' read -r qf jid status; do
+              [ -z "$jid" ] && continue
+              python3 - "$qf" "$jid" "$status" <<'PYUPD'
+              import json, sys, hashlib, os
+              qf, jid, status = sys.argv[1:4]
+              j = json.load(open(qf))
+              j["status"] = status
+              glb = f"factory/out/{jid}.glb"
+              if status == "done" and os.path.exists(glb):
+                  j["result"] = glb
+                  j["bytes"] = os.path.getsize(glb)
+                  j["sha256"] = hashlib.sha256(open(glb, "rb").read()).hexdigest()[:16]
+              json.dump(j, open(qf, "w"), indent=1)
+              PYUPD
+            done < /tmp/results.txt
+          fi
+          git config user.name "designer-bot"
+          git config user.email "actions@github.com"
+          git add factory/out factory/queue 2>/dev/null || true
+          git diff --cached --quiet && echo "nothing to commit" && exit 0
+          git commit -q -m "designer(actions): queue results update [skip ci]"
+          git pull --rebase -q origin main || echo "rebase conflict — DM baad mein merge karega"
+          git push || echo "push fail — agla run ya DM sambhalega"
