@@ -47,13 +47,14 @@ function buildCarMesh(color) {
 }
 
 export class TrafficSystem {
-  constructor(scene, world, ROADS, EXTENT) {
+  constructor(scene, world, ROADS, EXTENT, city) {
     this.ROADS = ROADS;
     this.EXTENT = EXTENT;
+    this.city = city; // signal state ke liye (trafficLightGo)
     this.cars = [];
     this.trafficMat = new CANNON.Material('traffic');
 
-    const count = 7;
+    const count = 10; // bade city mein zyada density
     for (let i = 0; i < count; i++) {
       const axis = i % 2 === 0 ? 'z' : 'x';
       const road = ROADS[1 + Math.floor(Math.random() * (ROADS.length - 2))];
@@ -108,6 +109,15 @@ export class TrafficSystem {
         }
         // full stop if the obstacle is basically on top of us (any direction)
         if (d2 < 12.25) target = 0;
+      }
+      // traffic signals: inner ±26 intersections pe red/amber = stop
+      if (this.city && this.city.trafficLightGo && (car.road === -26 || car.road === 26)
+          && !this.city.trafficLightGo(car.axis)) {
+        const s = car.axis === 'z' ? car.body.position.z : car.body.position.x;
+        for (const sig of [-26, 26]) {
+          const d = (sig - s) * car.dir;
+          if (d > 1 && d < 18) target = Math.min(target, Math.max(0, (d - 9) * 0.55));
+        }
       }
       car.speed += (target - car.speed) * Math.min(1, dt * 2.2);
 

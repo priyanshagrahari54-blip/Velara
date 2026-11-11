@@ -306,6 +306,20 @@ console.log('13. after restart:', JSON.stringify(s), JSON.stringify(rstate));
 const pedInfo = await page.evaluate(() => window.velara.peds.stats());
 console.log('14. pedestrians:', JSON.stringify(pedInfo), '-> spawned:', pedInfo.count > 0, '| states add up:', (pedInfo.walking + pedInfo.panicking + pedInfo.down) === pedInfo.count);
 
+// 15. world expansion: chunk streaming + metro + traffic signals
+const worldInfo = await page.evaluate(() => {
+  const g = window.velara;
+  const m1 = g.city.metroPos();
+  for (let i = 0; i < 180; i++) g._update(1 / 60); // 3s
+  const m2 = g.city.metroPos();
+  return {
+    chunks: g.city.chunkStats(),
+    metroMoved: Math.abs(m2 - m1) > 1,
+    signalAPI: typeof g.city.trafficLightGo('z') === 'boolean',
+  };
+});
+console.log('15. world:', JSON.stringify(worldInfo), '-> metro chal raha:', worldInfo.metroMoved, '| chunks culled:', worldInfo.chunks.visible < worldInfo.chunks.total);
+
 console.log('--- console errors:', errors.length);
 for (const e of errors.slice(0, 10)) console.log('  ERR:', e.slice(0, 250));
 await browser.close();

@@ -11,6 +11,7 @@ const TIERS = {
     shadowMapSize: 2048,
     shadows: true,
     bloom: 0.55,
+    viewDist: 260,
   },
   medium: {
     label: 'MEDIUM',
@@ -18,6 +19,8 @@ const TIERS = {
     shadowMapSize: 1024,
     shadows: true,
     bloom: 0.32,
+    maxLights: 22,
+    viewDist: 200,
   },
   low: {
     label: 'LOW (fast)',
@@ -25,6 +28,8 @@ const TIERS = {
     shadowMapSize: 512,
     shadows: false,
     bloom: 0,
+    maxLights: 14,
+    viewDist: 150,
   },
   g560: {
     label: 'G560 (max speed)',
@@ -34,6 +39,7 @@ const TIERS = {
     bloom: 0,
     maxLights: 8,          // cap street-lamp/neon point lights (28 -> 8)
     skyline: false,        // hide the 34 distant skyline boxes
+    viewDist: 120,
   },
 };
 

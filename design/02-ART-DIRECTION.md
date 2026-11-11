@@ -57,3 +57,13 @@ Approved concept boards — `references/` folder:
 - Camera: intro fly-in 3.2s/30m-high -> 2.4s/11m (ground-level swoop), car yaw follow 4.2->6.5/s (snappier), mouse-offset recenter 1.4->2.2/s.
 - city.setPerf() perf switch wired into QualityManager onChange; QA ?qa=1 still boots low (full layout).
 - Tests: smoke 0 errors (full chain M1-M5); test/g560-check.mjs PASSED (tier/pixelRatio/lights/skyline/camY). Screenshot: references/GROUND-CAM.png.
+
+## World Expansion — Districts + Metro + Signals (2026-11-11)
+- City 5x5 → 7x7 (span 276m → 424m): core unchanged (missions/spawn safe), ring = 4 districts.
+- Districts: Old Market (low shops + stalls + parked autos, NW/N), Riverside (water + palm promenade, S), Highway + elevated Metro (E), Downtown ring (34-64m glass towers).
+- Elevated metro: guideway + pillars over east highway, VELARA CENTRAL station, 4-car train with blue underglow (Image-1 signature), loops ±172m.
+- Traffic signals: 4 inner intersections, 8s green/2s amber per axis, canvas-texture heads (3 draw calls total), traffic AI stops at red. Zebra crossings merged (1 draw).
+- Chunk streaming: block-level chunk groups, visibility by focus distance; viewDist per tier (260/200/150/120). No loading screens.
+- Billboards: VELARA / AURORA / KAZE TECHNOLOGIES on highway towers. Bus stops x3.
+- Physics engine decision: KEEP cannon-es (tested; Rapier rewrite = high risk, low user value). Approach: upgrade existing (user-locked). Theme: mixed districts (user-locked).
+- Smoke: 0 errors, 15 steps (new: world step — chunks 61/43 visible, metro moving, signals cycling).

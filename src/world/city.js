@@ -6,7 +6,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 // VELARA city generator: roads, buildings, neon, lamps, props, pickups
 // ---------------------------------------------------------------------------
 
-export const GRID = 5;      // city blocks per axis
+export const GRID = 7;      // city blocks per axis (5x5 core + district ring)
 export const BLOCK = 36;    // block size (m)
 export const ROAD = 16;     // road width (m)
 export const CELL = BLOCK + ROAD;
@@ -67,6 +67,26 @@ const cylAt = (rt, rb, h, seg, x, y, z, hex) => colored(new THREE.CylinderGeomet
 export function buildCity(scene, world) {
   const ROADS = roadCoords(); // shared for X and Z axes
   const collidableMeshes = [];
+
+  // ---------------------------------------------------- chunk streaming
+  // Har block apne chunk-group me jaata hai; player se door chunks hide ho
+  // jaate hain — draw calls bounded, koi loading screen nahi (visibility only).
+  const chunks = new Map();
+  const chunkAt = (x, z) => {
+    const ix = Math.round(x / CELL), iz = Math.round(z / CELL);
+    const k = ix + ',' + iz;
+    let g = chunks.get(k);
+    if (!g) {
+      g = new THREE.Group();
+      g.userData.cx = ix * CELL; g.userData.cz = iz * CELL;
+      chunks.set(k, g);
+      scene.add(g);
+    }
+    return g;
+  };
+  let ADD = scene;                 // current static-add target (block chunk)
+  const add = (o) => ADD.add(o);
+  let viewDist = 260;              // quality tier se override (setPerf)
 
   // ---------------------------------------------------------- physics mats
   const groundMat = new CANNON.Material('ground');
@@ -349,7 +369,7 @@ export function buildCity(scene, world) {
     band.position.y = 0.08;
     g.add(cone); g.add(band);
     g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
-    scene.add(g);
+    chunkAt(x, z).add(g);
     const body = new CANNON.Body({
       mass: 2,
       shape: new CANNON.Cylinder(0.05, 0.36, 0.85, 8),
@@ -415,7 +435,7 @@ export function buildCity(scene, world) {
     const pod = new THREE.Mesh(podGeo, podiumMats[Math.floor(srand() * podiumMats.length)]);
     pod.position.set(cx, y0 + podH / 2, cz);
     pod.castShadow = true; pod.receiveShadow = true;
-    scene.add(pod);
+    add(pod);
     collidableMeshes.push(pod);
 
     // ---- tower tiers (setbacks on tall buildings) ----
@@ -429,7 +449,7 @@ export function buildCity(scene, world) {
       const m = new THREE.Mesh(g, bodyMat);
       m.position.set(cx, baseY + th / 2, cz);
       m.castShadow = true; m.receiveShadow = true;
-      scene.add(m);
+      add(m);
       collidableMeshes.push(m);
       return baseY + th;
     };
@@ -479,7 +499,7 @@ export function buildCity(scene, world) {
     if (h > 44) {
       const b = new THREE.Mesh(new THREE.SphereGeometry(0.55, 8, 6), beaconMat);
       b.position.set(cx, beaconY, cz);
-      scene.add(b);
+      add(b);
       beacons.push(b);
     }
 
@@ -487,7 +507,7 @@ export function buildCity(scene, world) {
     if (geos.length) {
       const dm = new THREE.Mesh(mergeGeometries(geos, false), detailMat);
       dm.castShadow = true; dm.receiveShadow = true;
-      scene.add(dm);
+      add(dm);
     }
   }
 
@@ -496,36 +516,313 @@ export function buildCity(scene, world) {
       const ox = -EXTENT + ROAD + bx * CELL;
       const oz = -EXTENT + ROAD + bz * CELL;
       const cx = ox + BLOCK / 2, cz = oz + BLOCK / 2;
+      const isCore = bx >= 1 && bx <= 5 && bz >= 1 && bz <= 5;
+
+      // is block ka saara static geometry uske chunk-group me
+      ADD = chunkAt(cx, cz);
 
       // sidewalk platform
       const sw = new THREE.Mesh(new THREE.BoxGeometry(BLOCK, 0.36, BLOCK), sideMat);
       sw.position.set(cx, 0, cz);
       sw.receiveShadow = true;
-      scene.add(sw);
+      add(sw);
       staticBox(BLOCK / 2, 0.18, BLOCK / 2, cx, 0, cz);
 
-      // guaranteed-clear special blocks
-      if (bx === 2 && bz === 2) { buildCentralPlaza(cx, cz); continue; } // spawn plaza
-      if (bx === 4 && bz === 2) { buildStuntPlaza(cx, cz); continue; }   // stunt plaza
+      if (isCore) {
+        // guaranteed-clear special blocks (positions core ke andar shift-safe)
+        if (bx === 3 && bz === 3) { buildCentralPlaza(cx, cz); ADD = scene; continue; } // spawn plaza
+        if (bx === 5 && bz === 3) { buildStuntPlaza(cx, cz); ADD = scene; continue; }   // stunt plaza
 
-      const distC = Math.hypot(bx - 2, bz - 2) / 2.9; // 0 center -> 1 corner
-      const cols = srand() < 0.5 ? 1 : 2;
-      const rows = srand() < 0.5 ? 1 : 2;
-      const lw = (BLOCK - 6) / cols, ld = (BLOCK - 6) / rows;
-      for (let i = 0; i < cols; i++) {
-        for (let j = 0; j < rows; j++) {
-          const inset = rand(2.5, 5);
-          const w = lw - inset, d = ld - inset;
-          const h = srand() < 0.16
-            ? rand(7, 13) // low shops
-            : rand(18, 34) + (1 - distC) * rand(16, 50);
-          const lx = ox + 3 + lw * (i + 0.5);
-          const lz = oz + 3 + ld * (j + 0.5);
-          addBuilding(lx, lz, w, d, h, Math.floor(srand() * 4), inset / 2);
+        const distC = Math.hypot(bx - 3, bz - 3) / 3.6; // 0 center -> ~1 corner
+        const cols = srand() < 0.5 ? 1 : 2;
+        const rows = srand() < 0.5 ? 1 : 2;
+        const lw = (BLOCK - 6) / cols, ld = (BLOCK - 6) / rows;
+        for (let i = 0; i < cols; i++) {
+          for (let j = 0; j < rows; j++) {
+            const inset = rand(2.5, 5);
+            const w = lw - inset, d = ld - inset;
+            const h = srand() < 0.16
+              ? rand(7, 13) // low shops
+              : rand(18, 34) + Math.max(0, 1 - distC) * rand(16, 50);
+            const lx = ox + 3 + lw * (i + 0.5);
+            const lz = oz + 3 + ld * (j + 0.5);
+            addBuilding(lx, lz, w, d, h, Math.floor(srand() * 4), inset / 2);
+          }
+        }
+      } else {
+        buildRingBlock(districtOf(bx, bz), cx, cz, ox, oz);
+      }
+      ADD = scene;
+    }
+  }
+
+  // ================================================== RING DISTRICTS + WORLD
+  function districtOf(bx, bz) {
+    if ((bz === 0 && bx <= 3) || (bx === 0 && bz <= 2)) return 'market';   // Old Market
+    if (bz === GRID - 1) return 'riverside';                                // Riverside
+    if (bx === GRID - 1) return 'highway';                                  // Highway + Metro
+    return 'downtown';                                                      // glass towers
+  }
+
+  function buildRingBlock(district, cx, cz, ox, oz) {
+    if (district === 'market') {
+      // Old Market: 2x2 low shops (podium storefronts) + stalls + parked autos
+      for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
+        const lx = ox + 3 + 15 * (i + 0.5), lz = oz + 3 + 15 * (j + 0.5);
+        addBuilding(lx, lz, rand(9, 12), rand(9, 12), rand(7.5, 12), Math.floor(srand() * 4), 2.4);
+      }
+      for (let s = 0; s < 3; s++) {
+        makeStall(ox + 8 + srand() * 20, oz + 30 + (s - 1) * 3.2, srand() < 0.5 ? 0 : Math.PI / 2);
+      }
+      if (srand() < 0.8) makeAuto(ox + 28, oz + 8, rand(0, Math.PI * 2));
+    } else if (district === 'riverside') {
+      addBuilding(cx - 8, cz, rand(14, 18), rand(16, 22), rand(9, 18), 2, 3);
+      addBuilding(cx + 9, cz + 4, rand(12, 16), rand(12, 16), rand(9, 16), 1, 3);
+      for (let p = 0; p < 3; p++) makePalm(ox + 6 + p * 12, oz + BLOCK - 3, rand(0.85, 1.2));
+    } else if (district === 'highway') {
+      addBuilding(cx - 6, cz - 8, rand(16, 20), rand(14, 18), rand(14, 26), 3, 3);
+      addBuilding(cx + 4, cz + 10, rand(14, 18), rand(14, 18), rand(14, 26), 0, 3);
+    } else { // downtown expansion — tall glass towers
+      addBuilding(cx, cz, rand(20, 26), rand(20, 26), rand(34, 64), Math.floor(srand() * 4), 4);
+    }
+  }
+
+  function makePalm(x, z, s) {
+    const geos = [cylAt(0.12 * s, 0.22 * s, 5.0 * s, 7, 0, (5.0 * s) / 2, 0, 0x6b4a2f)];
+    for (let i = 0; i < 7; i++) {
+      const fr = colored(new THREE.BoxGeometry(0.09, 0.05, 2.7 * s), i % 2 ? 0x2e7d46 : 0x3f9c5b);
+      fr.translate(0, 0, 1.35 * s);
+      fr.rotateX(-0.5);
+      fr.rotateY((i / 7) * Math.PI * 2);
+      fr.translate(0, 5.0 * s, 0);
+      geos.push(fr);
+    }
+    const m = new THREE.Mesh(mergeGeometries(geos, false), detailMat);
+    m.castShadow = true;
+    m.position.set(x, 0.19, z);
+    add(m);
+    staticBox(0.25, 2.4, 0.25, x, 2.4, z);
+  }
+
+  function makeStall(x, z, ry) {
+    const cols = [0xd8443c, 0x3c78d8, 0xd8a83c, 0x3ca85c];
+    const cc = cols[Math.floor(srand() * cols.length)];
+    const geos = [
+      boxAt(2.2, 0.85, 1.2, 0, 0.55, 0, 0x7a5a34),
+      boxAt(2.6, 0.1, 1.7, 0, 2.15, 0, cc),
+    ];
+    for (const px of [-1.1, 1.1]) for (const pz of [-0.7, 0.7])
+      geos.push(boxAt(0.07, 2.1, 0.07, px, 1.05, pz, 0x5a4a3a));
+    const goods = [0xc9c9c9, 0xe0a030, 0xb04040];
+    for (let i = 0; i < 3; i++)
+      geos.push(boxAt(0.4, 0.25, 0.4, -0.7 + i * 0.7, 1.1, 0, goods[i]));
+    const m = new THREE.Mesh(mergeGeometries(geos, false), detailMat);
+    m.rotation.y = ry;
+    m.position.set(x, 0.19, z);
+    m.castShadow = true;
+    add(m);
+    staticBox(1.2, 1.0, 0.7, x, 1.0, z);
+  }
+
+  function makeAuto(x, z, ry) {
+    const wheel = (wx, wz) => {
+      const g = colored(new THREE.CylinderGeometry(0.3, 0.3, 0.16, 10), 0x111111);
+      g.rotateZ(Math.PI / 2);
+      g.translate(wx, 0.3, wz);
+      return g;
+    };
+    const geos = [
+      boxAt(1.25, 0.65, 1.9, 0, 0.62, 0, 0x2f8f4f),
+      boxAt(1.3, 0.55, 1.15, 0, 1.2, -0.1, 0xe8c832),
+      boxAt(1.32, 0.08, 0.08, 0, 1.5, 0.45, 0x2a2a2a),
+      wheel(0, 0.95), wheel(-0.62, -0.7), wheel(0.62, -0.7),
+    ];
+    const m = new THREE.Mesh(mergeGeometries(geos, false), detailMat);
+    m.rotation.y = ry;
+    m.position.set(x, 0.19, z);
+    add(m);
+    staticBox(0.75, 0.8, 1.0, x, 0.9, z);
+  }
+
+  function makeBusStop(x, z, ry) {
+    const geos = [
+      boxAt(3.6, 0.12, 1.6, 0, 2.6, 0, 0x35506e),
+      boxAt(3.4, 1.0, 0.12, 0, 1.5, -0.7, 0x4a6a8a),
+      boxAt(0.12, 2.6, 0.12, -1.7, 1.3, 0.6, 0x2a2f36),
+      boxAt(0.12, 2.6, 0.12, 1.7, 1.3, 0.6, 0x2a2f36),
+      boxAt(2.8, 0.1, 0.5, 0, 0.55, -0.3, 0x6a5a3a),
+    ];
+    const m = new THREE.Mesh(mergeGeometries(geos, false), detailMat);
+    m.rotation.y = ry;
+    m.position.set(x, 0.19, z);
+    m.castShadow = true;
+    add(m);
+    staticBox(1.8, 1.3, 0.8, x, 1.3, z);
+  }
+
+  function makeBillboard(text, color, x, y, z, ry) {
+    const tex = canvasTexture(256, 512, (c, w, h) => {
+      c.fillStyle = '#070a12'; c.fillRect(0, 0, w, h);
+      c.strokeStyle = color; c.lineWidth = 10; c.strokeRect(14, 14, w - 28, h - 28);
+      c.fillStyle = color; c.textAlign = 'center';
+      c.shadowColor = color; c.shadowBlur = 30;
+      const words = text.split(' ');
+      const fs = words.length > 1 ? 64 : 84;
+      c.font = `bold ${fs}px Arial`;
+      words.forEach((word, i) =>
+        c.fillText(word, w / 2, h / 2 + (i - (words.length - 1) / 2) * (fs + 16) + fs * 0.35));
+    }, false);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(7, 15), new THREE.MeshBasicMaterial({ map: tex }));
+    m.position.set(x, y, z);
+    m.rotation.y = ry;
+    add(m);
+  }
+
+  // ---------------- elevated metro (highway ke upar, Image-1 signature) ----
+  let metro = null;
+  function buildMetro() {
+    const MX = ROADS[ROADS.length - 1]; // east highway centerline
+    const pil = [];
+    for (let z = -182; z <= 182; z += 28) pil.push(boxAt(0.9, 8.8, 0.9, MX, 4.4, z, 0x3a4148));
+    scene.add(new THREE.Mesh(mergeGeometries(pil, false), detailMat));
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.7, 420),
+      new THREE.MeshStandardMaterial({ color: 0x454c54, roughness: 0.7, metalness: 0.4 }));
+    beam.position.set(MX, 8.85, 0);
+    scene.add(beam);
+    // station platform (core ke paas, z=26)
+    const stMat = new THREE.MeshStandardMaterial({ color: 0x6a7078, roughness: 0.85 });
+    const rfMat = new THREE.MeshStandardMaterial({ color: 0x2f3844, roughness: 0.6, metalness: 0.5 });
+    const plat = new THREE.Mesh(new THREE.BoxGeometry(9, 0.5, 26), stMat);
+    plat.position.set(MX - 6.4, 8.35, 26);
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(10, 0.3, 28), rfMat);
+    roof.position.set(MX - 6.4, 12.2, 26);
+    scene.add(plat, roof);
+    for (const [px, pz] of [[-4, -12], [-4, 12], [4, -12], [4, 12]]) {
+      const c = new THREE.Mesh(new THREE.BoxGeometry(0.4, 3.6, 0.4), rfMat);
+      c.position.set(MX - 6.4 + px, 10.3, 26 + pz);
+      scene.add(c);
+    }
+    const signTex = canvasTexture(512, 128, (c, w, h) => {
+      c.fillStyle = 'rgba(6,10,18,0.95)'; c.fillRect(0, 0, w, h);
+      c.font = 'bold 60px Arial'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.shadowColor = '#35e0ff'; c.shadowBlur = 24; c.fillStyle = '#35e0ff';
+      c.fillText('VELARA CENTRAL — METRO', w / 2, h / 2);
+    }, false);
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(14, 3.2), new THREE.MeshBasicMaterial({ map: signTex }));
+    sign.position.set(MX - 11.4, 10.6, 26);
+    sign.rotation.y = -Math.PI / 2;
+    scene.add(sign);
+    // train: 4 cars, glowing windows + blue underglow strips
+    const train = new THREE.Group();
+    const carBody = new THREE.MeshStandardMaterial({ color: 0xd8dde4, roughness: 0.35, metalness: 0.6 });
+    const carGlass = new THREE.MeshStandardMaterial({ color: 0x0a1420, emissive: 0x9fd8ff, emissiveIntensity: 1.6, roughness: 0.2 });
+    const glow = new THREE.MeshStandardMaterial({ color: 0x081018, emissive: 0x37b6ff, emissiveIntensity: 2.4 });
+    for (let i = 0; i < 4; i++) {
+      const car = new THREE.Group();
+      const b = new THREE.Mesh(new THREE.BoxGeometry(2.7, 2.5, 10.5), carBody);
+      b.position.y = 1.45;
+      const w = new THREE.Mesh(new THREE.BoxGeometry(2.74, 0.8, 9.2), carGlass);
+      w.position.y = 1.9;
+      const g = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.18, 10.0), glow);
+      g.position.y = 0.12;
+      car.add(b, w, g);
+      car.position.z = i * 11.2;
+      train.add(car);
+    }
+    train.position.set(MX, 9.2, -120);
+    scene.add(train);
+    metro = { train, z: -120, dir: 1, x: MX };
+  }
+
+  // ---------------- traffic signals (inner ±26 intersections) -------------
+  const signalState = { ns: 'green', ew: 'red' };
+  let nsTex = null, ewTex = null, nsCtx = null, ewCtx = null;
+  function drawSignalHead(ctx, tex, state) {
+    const w = 64, h = 176;
+    ctx.fillStyle = '#101318'; ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = '#2a2f36'; ctx.lineWidth = 6; ctx.strokeRect(3, 3, w - 6, h - 6);
+    const lamps = [['red', '#ff4444'], ['amber', '#ffb340'], ['green', '#54ff7a']];
+    const lit = { red: state === 'red', amber: state === 'amber', green: state === 'green' };
+    lamps.forEach(([name, color], i) => {
+      ctx.beginPath();
+      ctx.arc(w / 2, 32 + i * 56, 20, 0, Math.PI * 2);
+      ctx.fillStyle = lit[name] ? color : 'rgba(255,255,255,0.06)';
+      ctx.shadowColor = color; ctx.shadowBlur = lit[name] ? 22 : 0;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    });
+    tex.needsUpdate = true;
+  }
+  function buildSignals() {
+    const SIG = [-26, 26];
+    const poleGeos = [], nsHeads = [], ewHeads = [];
+    for (const X of SIG) for (const Z of SIG) {
+      const mkPole = (px, pz, headAxis, faceRy) => {
+        poleGeos.push(cylAt(0.09, 0.12, 4.8, 8, px, 2.4, pz, 0x2a2f36));
+        const hg = new THREE.PlaneGeometry(0.62, 1.66);
+        hg.translate(0, 4.6, 0.12);
+        hg.rotateY(faceRy);
+        hg.translate(px, 0, pz);
+        (headAxis === 'ns' ? nsHeads : ewHeads).push(hg);
+      };
+      mkPole(X - 10.5, Z - 10.5, 'ns', Math.PI);
+      mkPole(X + 10.5, Z + 10.5, 'ns', 0);
+      mkPole(X - 10.5, Z + 10.5, 'ew', Math.PI / 2);
+      mkPole(X + 10.5, Z - 10.5, 'ew', -Math.PI / 2);
+    }
+    scene.add(new THREE.Mesh(mergeGeometries(poleGeos, false), detailMat));
+    const mkCanvas = () => {
+      const cv = document.createElement('canvas');
+      cv.width = 64; cv.height = 176;
+      return cv;
+    };
+    const nsC = mkCanvas(), ewC = mkCanvas();
+    nsCtx = nsC.getContext('2d'); ewCtx = ewC.getContext('2d');
+    nsTex = new THREE.CanvasTexture(nsC); ewTex = new THREE.CanvasTexture(ewC);
+    nsTex.colorSpace = THREE.SRGBColorSpace; ewTex.colorSpace = THREE.SRGBColorSpace;
+    scene.add(new THREE.Mesh(mergeGeometries(nsHeads, false), new THREE.MeshBasicMaterial({ map: nsTex })));
+    scene.add(new THREE.Mesh(mergeGeometries(ewHeads, false), new THREE.MeshBasicMaterial({ map: ewTex })));
+    drawSignalHead(nsCtx, nsTex, 'green');
+    drawSignalHead(ewCtx, ewTex, 'red');
+  }
+
+  // ---------------- zebra crossings at signalized intersections -----------
+  function buildZebras() {
+    const geos = [];
+    for (const X of [-26, 26]) for (const Z of [-26, 26]) {
+      for (const s of [-1, 1]) {
+        for (let k = 0; k < 5; k++) {
+          geos.push(boxAt(1.15, 0.05, 9.5, X + (k - 2) * 2.2, 0.045, Z + s * 11.5, 0xcfd4da));
+          geos.push(boxAt(9.5, 0.05, 1.15, X + s * 11.5, 0.045, Z + (k - 2) * 2.2, 0xcfd4da));
         }
       }
     }
+    scene.add(new THREE.Mesh(mergeGeometries(geos, false), detailMat));
   }
+
+  // ---------------- riverside: water + palm promenade ---------------------
+  function buildRiversideEdge() {
+    const water = new THREE.Mesh(new THREE.PlaneGeometry(460, 210),
+      new THREE.MeshStandardMaterial({
+        color: 0x0f4a5a, roughness: 0.18, metalness: 0.55, envMapIntensity: 1.3,
+        emissive: 0x06222c, emissiveIntensity: 0.4,
+      }));
+    water.rotation.x = -Math.PI / 2;
+    water.position.set(0, 0.06, EXTENT + 105);
+    scene.add(water);
+    for (let x = -170; x <= 170; x += 22) makePalm(x, EXTENT + 4, rand(0.9, 1.25));
+  }
+
+  buildMetro();
+  buildSignals();
+  buildZebras();
+  buildRiversideEdge();
+  makeBusStop(-16.2, -64, Math.PI / 2);
+  makeBusStop(64, -15.8, 0);
+  makeBusStop(15.8, 78, -Math.PI / 2);
+  makeBillboard('VELARA', '#35e0ff', ROADS[ROADS.length - 1] - 9, 22, -60, -Math.PI / 2);
+  makeBillboard('AURORA', '#ff5fd8', ROADS[ROADS.length - 1] - 9, 20, 20, -Math.PI / 2);
+  makeBillboard('KAZE TECHNOLOGIES', '#7dff9a', ROADS[ROADS.length - 1] - 9, 26, 90, -Math.PI / 2);
 
   // ---------------------------------------------------------- street lamps
   const poleMat = new THREE.MeshStandardMaterial({ color: 0x2a2e35, roughness: 0.6, metalness: 0.7 });
@@ -555,7 +852,7 @@ export function buildCity(scene, world) {
     head.position.set(dirX * 1.7, 5.45, dirZ * 1.7);
     g.add(head);
     g.position.set(x, 0, z);
-    scene.add(g);
+    chunkAt(x, z).add(g);
     staticBox(0.14, 2.8, 0.14, x, 2.8, z);
     if (lampIndex % 3 === 0) {
       const l = new THREE.PointLight(0xffd9a0, 40, 42, 1.8);
@@ -609,7 +906,7 @@ export function buildCity(scene, world) {
     const plane = new THREE.Mesh(new THREE.PlaneGeometry(wMesh, wMesh / 4), mat);
     plane.position.set(x, y, z);
     plane.rotation.y = ry;
-    scene.add(plane);
+    chunkAt(x, z).add(plane);
     neonSigns.push({ mat, phase: Math.random() * 10, flickery: Math.random() < 0.25 });
     if (i % 3 === 0) {
       const l = new THREE.PointLight(new THREE.Color(color), 26, 34, 1.9);
@@ -674,7 +971,7 @@ export function buildCity(scene, world) {
     const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.6, 2.4, 12), concrete);
     pillar.position.set(cx, 1.9, cz);
     pillar.castShadow = true;
-    scene.add(base, water, pillar);
+    add(base, water, pillar);
     staticBox(3.3, 0.38, 3.3, cx, 0.56, cz);
     staticBox(0.5, 1.2, 0.5, cx, 1.9, cz);
     const l = new THREE.PointLight(0x3fd7c8, 26, 38, 1.8);
@@ -690,7 +987,7 @@ export function buildCity(scene, world) {
       mesh.position.set(cx, 0.55, cz + dz);
       mesh.rotation.x = ang;
       mesh.castShadow = true; mesh.receiveShadow = true;
-      scene.add(mesh);
+      add(mesh);
       collidableMeshes.push(mesh);
       const q = new CANNON.Quaternion();
       q.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), ang);
@@ -717,7 +1014,7 @@ export function buildCity(scene, world) {
       const m = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.0, 0.7), barMat);
       m.position.set(bx2, 0.68, bz2);
       m.castShadow = true;
-      scene.add(m);
+      add(m);
       staticBox(1.6, 0.5, 0.35, bx2, 0.68, bz2);
     }
   }
@@ -749,8 +1046,32 @@ export function buildCity(scene, world) {
 
   // ------------------------------------------------------------- update
   let t = 0;
-  function update(dt, env) {
+  function update(dt, env, focus) {
     t += dt;
+
+    // ---- chunk streaming: door wale chunks hide (draw calls bounded) ----
+    if (focus) {
+      const vd = viewDist + 45;
+      for (const g of chunks.values()) {
+        g.visible = Math.hypot(g.userData.cx - focus.x, g.userData.cz - focus.z) < vd;
+      }
+    }
+
+    // ---- metro train loop ----
+    if (metro) {
+      metro.z += metro.dir * 17 * dt;
+      if (metro.z > 172) metro.dir = -1;
+      else if (metro.z < -172) metro.dir = 1;
+      metro.train.position.z = metro.z;
+      metro.train.rotation.y = metro.dir === 1 ? 0 : Math.PI;
+    }
+
+    // ---- traffic signal phase (8s green / 2s amber per axis) ----
+    const ph = t % 20;
+    const ns = ph < 8 ? 'green' : ph < 10 ? 'amber' : 'red';
+    const ew = ph < 10 ? 'red' : ph < 18 ? 'green' : 'amber';
+    if (ns !== signalState.ns) { signalState.ns = ns; drawSignalHead(nsCtx, nsTex, ns); }
+    if (ew !== signalState.ew) { signalState.ew = ew; drawSignalHead(ewCtx, ewTex, ew); }
 
     // lamps
     const headGlow = 0.15 + (env.lampIntensity / 44) * 2.4;
@@ -815,7 +1136,8 @@ export function buildCity(scene, world) {
   }
 
   // perf switching for weak hardware (g560 tier): cap dynamic lights, hide skyline
-  function setPerf({ maxLights = Infinity, skyline = true } = {}) {
+  function setPerf({ maxLights = Infinity, skyline = true, viewDist: vd } = {}) {
+    if (vd) viewDist = vd;
     let n = 0;
     for (const l of [...lampLights, ...neonLights]) {
       const on = n < maxLights;
@@ -826,8 +1148,19 @@ export function buildCity(scene, world) {
     for (const m of skylineMeshes) m.visible = skyline;
   }
 
+  function metroPos() { return metro ? metro.z : 0; }
+  function trafficLightGo(axis) {
+    return axis === 'z' ? signalState.ns === 'green' : signalState.ew === 'green';
+  }
+  function chunkStats() {
+    let vis = 0;
+    for (const g of chunks.values()) if (g.visible) vis++;
+    return { total: chunks.size, visible: vis };
+  }
+
   return {
     ROADS, EXTENT, collidableMeshes, update, resetProps, setPerf,
+    metroPos, trafficLightGo, chunkStats,
     pickups, crates, coneMeshes, groundMat,
   };
 }

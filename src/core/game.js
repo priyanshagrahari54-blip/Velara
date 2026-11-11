@@ -85,7 +85,7 @@ export class VelaraGame {
     // would explode the shader cost (SwiftShader OOM in smoke test)
     this._applyActiveVehicle();
 
-    this.traffic = new TrafficSystem(this.scene, this.world, this.city.ROADS, EXTENT);
+    this.traffic = new TrafficSystem(this.scene, this.world, this.city.ROADS, EXTENT, this.city);
     // pedestrians: sidewalk NPCs — panic on gunfire, knockdown by cars,
     // recycle around player (GTA-style density). g560 = 10 peds, else 22.
     this.peds = new PedestrianSystem(
@@ -176,7 +176,7 @@ export class VelaraGame {
         this.postfx.bloom.strength = cfg.bloom;
       }
       if (this.city && this.city.setPerf) {
-        this.city.setPerf({ maxLights: cfg.maxLights, skyline: cfg.skyline });
+        this.city.setPerf({ maxLights: cfg.maxLights, skyline: cfg.skyline, viewDist: cfg.viewDist });
       }
       this._resize();
     };
@@ -599,7 +599,10 @@ export class VelaraGame {
 
     // -------------------------------------------------------- environment
     this.env.update(dt, this.camera);
-    this.city.update(dt, this.env);
+    const worldFocus = this.activeVehicle
+      ? this.activeVehicle.body.position
+      : this.player.position;
+    this.city.update(dt, this.env, worldFocus);
     this.range.update(dt);
 
     // -------------------------------------------------------------- clock
