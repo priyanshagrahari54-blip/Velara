@@ -338,14 +338,15 @@ def build():
         return o
 
     body_m = merge_join(paint_parts, "Body")          # paint (bake target)
-    merge_join(glass_parts, "Glass")
-    merge_join(trim_parts, "Trim")
-    merge_join(lf_parts, "LightFront")
-    merge_join(lr_parts, "LightRear")
+    glass_m = merge_join(glass_parts, "Glass")
+    trim_m = merge_join(trim_parts, "Trim")
+    lf_m = merge_join(lf_parts, "LightFront")
+    lr_m = merge_join(lr_parts, "LightRear")
 
+    others = [o for o in (glass_m, trim_m, lf_m, lr_m) if o]
     globals().update(BODY=body_m, PAINT=paint, LIGHTF=lightF, LIGHTR=lightR,
-                     WHEELS=wheels, GLASS_M=glass)
-    tris = sum(len(p.vertices) - 2 for o in [body_m] + wheels for p in o.data.polygons)
+                     WHEELS=wheels, OTHERS=others, GLASS_M=glass)
+    tris = sum(len(p.vertices) - 2 for o in [body_m] + wheels + others for p in o.data.polygons)
     return f"verts={len(body_m.data.vertices)} wheels={len(wheels)} tris~{tris}"
 
 
@@ -567,7 +568,7 @@ def do_export():
         bpy.ops.object.delete()
     bpy.ops.object.select_all(action="DESELECT")
     body.select_set(True)
-    for o in wheels:
+    for o in wheels + globals().get("OTHERS", []):   # Glass/Trim/Lights bhi!
         o.select_set(True)
     bpy.context.view_layer.objects.active = body
     bpy.ops.export_scene.gltf(
