@@ -13,3 +13,4 @@
 | HUD font | system font stack | OS vendor | n/a (system) | HUD text |
 | Asphalt007 (1K-JPG) | [ambientCG](https://ambientcg.com/view?id=Asphalt007) | Lennart Demes (ambientCG) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | Road + ground albedo |
 | Concrete034 (1K-JPG) | [ambientCG](https://ambientcg.com/view?id=Concrete034) | Lennart Demes (ambientCG) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | Sidewalk / podium albedo |
+| streetlamp.glb (street lamp 3D prop — AO-baked, Draco GLB) | factory/make-streetlamp.py — Blender asset-factory (codespace) | VELARA team | CC0 (self-made) | Night-phase street props |
