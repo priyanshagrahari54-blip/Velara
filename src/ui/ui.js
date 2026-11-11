@@ -40,12 +40,12 @@ const CSS = `
   #v-mission { position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
     text-align: center; max-width: 72vw; background: none; border: none;
     box-shadow: none; backdrop-filter: none; }
-  #v-mission .mt { font-size: 10px; letter-spacing: 0.34em; color: #d9c9a8; text-transform: uppercase;
-    text-shadow: 0 1px 4px rgba(0,0,0,0.95); }
-  #v-mission .md { font-size: 14px; margin-top: 2px; color: #f2f0ea; font-weight: 600;
-    text-shadow: 0 1px 4px rgba(0,0,0,0.95); }
-  #v-mission .mp { font-size: 11px; color: #ffd98a; margin-top: 1px;
-    text-shadow: 0 1px 4px rgba(0,0,0,0.95); }
+  #v-mission .mt { font-size: 10px; letter-spacing: 0.34em; color: #e6d9bc; text-transform: uppercase;
+    text-shadow: 0 1px 3px rgba(0,0,0,1), 0 0 10px rgba(0,0,0,0.85); }
+  #v-mission .md { font-size: 14px; margin-top: 2px; color: #ffffff; font-weight: 700;
+    text-shadow: 0 1px 3px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,1); }
+  #v-mission .mp { font-size: 11px; color: #ffe3a1; margin-top: 1px;
+    text-shadow: 0 1px 3px rgba(0,0,0,1), 0 0 10px rgba(0,0,0,0.85); }
   #v-money { position: absolute; top: 16px; right: 20px; font-size: 12.5px; color: #bfeec9;
     font-weight: 700; letter-spacing: 0.1em; text-shadow: 0 1px 4px rgba(0,0,0,0.9); }
 
@@ -246,7 +246,7 @@ export class UI {
         <div class="v-tbtn" id="v-tbtn-e">E</div>
         <div class="v-tbtn" id="v-tbtn-h">📣</div>
         <div class="v-tbtn" id="v-tbtn-f">FIRE</div>
-        <div class="v-tbtn" id="v-tbtn-aim">🎯</div>
+        <div class="v-tbtn" id="v-tbtn-aim"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="6.5"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4"/></svg></div>
         <div class="v-tbtn" id="v-tbtn-w">🔄</div>
       </div>
     `;
@@ -329,7 +329,7 @@ export class UI {
       clearTimeout(this._missionFadeT);
       this._missionFadeT = setTimeout(() => {
         this.missionEl.style.transition = 'opacity 1.2s ease';
-        this.missionEl.style.opacity = '0.38';
+        this.missionEl.style.opacity = '0.45';
       }, 5000);
     }
     this.missionEl.querySelector('.mt').textContent = index ? 'MISSION ' + index : 'FREE ROAM';

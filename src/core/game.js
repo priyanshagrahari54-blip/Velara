@@ -181,7 +181,7 @@ export class VelaraGame {
       this._resize();
     };
     this.quality.bootstrap(this.ui.isTouch);
-    this.ui.toast(`⚙️ Graphics: ${this.quality.config.label}`, false, 2200);
+    this.ui.toast(`Graphics: ${this.quality.config.label}`, false, 2200);
   }
 
   _resize() {
@@ -220,7 +220,7 @@ export class VelaraGame {
       case 'recoverCar': this.recoverCar(); break;
       case 'qualityCycle': {
         const cfg = this.quality.cycle();
-        this.ui.toast(`⚙️ Graphics: ${cfg.label}`);
+        this.ui.toast(`Graphics: ${cfg.label}`);
         break;
       }
       case 'weapon1': if (this.mode === 'foot') this.weapons.select(0); break;
@@ -513,7 +513,7 @@ export class VelaraGame {
 
       const near = this.nearestVehicle();
       let promptTxt = null;
-      if (near) promptTxt = `Press <b>E</b> — enter the ${near.preset.name} 🚗`;
+      if (near) promptTxt = `Press <b>E</b> — enter the ${near.preset.name} <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" style="vertical-align:-2px"><path d="M4 12l1.6-4.2A2 2 0 0 1 7.5 6.5h7A2 2 0 0 1 16.4 8L18 12"/><rect x="3" y="12" width="18" height="4" rx="1"/><circle cx="7.5" cy="17.5" r="1.7"/><circle cx="16.5" cy="17.5" r="1.7"/></svg>`;
       else {
         for (const c of this.range.ammoCrates) {
           if (c.cooldown <= 0 &&
@@ -619,7 +619,7 @@ export class VelaraGame {
         p.mesh.visible = false;
         this.pickupsCollected++;
         this.addMoney(500);
-        this.ui.toast('💰 +₹500', true, 1400);
+        this.ui.toast('+₹500', true, 1400);
         this.audio.blip();
       }
     }

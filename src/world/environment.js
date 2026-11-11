@@ -9,8 +9,8 @@ const PRESETS = {
     skyTop: 0x05070f, skyBottom: 0x0e1830,
     fogColor: 0x0a111e, fogDensity: 0.0040,
     sunColor: 0xbdd4ff, sunIntensity: 2.1, sunPos: [140, 240, 90],
-    hemiSky: 0x24344f, hemiGround: 0x0b0d12, hemiIntensity: 0.55,
-    stars: 0.95, lampIntensity: 44, windowGlow: 1.35, exposure: 1.15,
+    hemiSky: 0x2a3c5a, hemiGround: 0x0e1016, hemiIntensity: 0.72,
+    stars: 0.95, lampIntensity: 44, windowGlow: 1.35, exposure: 1.26,
     moonVisible: true, envStrip: 0x1b2b4a,
   },
   dusk: { // GOLDEN HOUR — user-approved art direction (Style B, GTA5 sunset)
@@ -108,6 +108,7 @@ export function createEnvironment(scene, renderer) {
   sun.shadow.camera.left = -S; sun.shadow.camera.right = S;
   sun.shadow.camera.top = S; sun.shadow.camera.bottom = -S;
   sun.shadow.bias = -0.0006;
+  sun.shadow.normalBias = 0.65; // black-triangle acne fix (cars/buildings)
   scene.add(sun);
 
   // golden-hour SUN FLARE — additive sprite that fades when sun leaves view
