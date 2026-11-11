@@ -3,6 +3,7 @@ on:
   push:
     branches: [main]
     paths: ['src/**', 'test/**', 'tools/**', 'package.json']
+  workflow_dispatch:
 jobs:
   matrix:
     runs-on: ubuntu-latest
