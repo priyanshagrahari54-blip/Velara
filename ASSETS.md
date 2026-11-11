@@ -19,3 +19,7 @@
 | titan-rs.glb (blue muscle coupe — wide stance, normal+AO bake; 44.8KB Draco) | factory/jobs/make-car.py — design team | VELARA team | CC0 (self-made) | City traffic car |
 | colossus-v.glb (green SUV — roof rails, high ground clearance; 44.9KB Draco) | factory/jobs/make-car.py — design team | VELARA team | CC0 (self-made) | City traffic car |
 | neon-sign.glb (VELARA neon signboard — emissive text, night glow render; 13.4KB Draco) | factory/jobs/make-neon-sign.py — design team | VELARA team | CC0 (self-made) | Night-phase street prop |
+| pico-s.glb (yellow compact hatch — tapered cabin, normal+AO bake; 44.9KB Draco) | factory/jobs/make-car.py — design team | VELARA team | CC0 (self-made) | City traffic car |
+| titan-rs.glb (blue muscle coupe — wide stance, normal+AO bake; 44.8KB Draco) | factory/jobs/make-car.py — design team | VELARA team | CC0 (self-made) | City traffic car |
+| colossus-v.glb (green SUV — roof rails, high ground clearance; 44.9KB Draco) | factory/jobs/make-car.py — design team | VELARA team | CC0 (self-made) | City traffic car |
+| neon-sign.glb (VELARA neon signboard — emissive text, night glow render; 13.4KB Draco) | factory/jobs/make-neon-sign.py — design team | VELARA team | CC0 (self-made) | Night-phase street prop |
