@@ -45,7 +45,23 @@ GH_TOKEN=$TOKEN gh codespace ssh -c "$NAME" -- 'cat /workspaces/Velara/factory/o
 3. GLB `public/assets/props/` mein lao, ASSETS.md mein entry + `tools/git-push.sh`.
 4. Game integration (three.js GLTFLoader) alag phase mein.
 
+## GPU worker — Google Colab (free T4, bakes 10-50× faster)
+1. Notebook kholo (GitHub se seedha Colab mein):
+   `https://colab.research.google.com/github/priyanshagrahari54-blip/Velara/blob/main/colab/VELARA-Factory-GPU.ipynb`
+2. **Runtime ▸ Run all** — notebook repo clone + Blender + tmate bridge ready karega
+   aur ek `ssh ...@...tmate.io` line print karega. **Wo line chat mein paste karo.**
+3. Sandbox se connect + GPU job (notebook ka tab khula rakhna):
+   ```bash
+   ssh -o StrictHostKeyChecking=accept-new <tmate-line> \
+     'cd /content/Velara && git pull --ff-only -q && blender --background --python factory/make-streetlamp-ultra.py -- --bake 2048 --samples 256'
+   ssh <tmate-line> 'cat /content/Velara/factory/out/streetlamp.glb' > public/assets/props/streetlamp.glb
+   ```
+   (Repo private ho to clone skip ho jata hai — files ssh se transfer karo, no token needed.)
+4. Notes: Colab free ~12 ghante/session, tab band = worker band, ephemeral storage.
+   GPU nahi mila to bhi chalega (CPU), bas slow.
+
 ## Quota notes
 - Codespace: 2-core/8GB/32GB. Free tier ~120 core-hr/month → 2-core ~1 hr ≈ 2 core-hr.
 - Idle 30 min par khud shutdown ho jata hai — restart upar wale REST start se.
 - Ek time pe ek hi codespace rakho (delete + create se naya milta hai).
+- Colab GPU: free tier daily/monthly limits — heavy bake bursts ke liye best, always-on nahi.
