@@ -49,14 +49,14 @@ for (let r = 0; r < ROUNDS; r++) {
 }
 const memGrowth = lastMem - firstMem;
 const avgFps = sumFps / ROUNDS;
-console.log(`--- RESULT: avg fps ${avgFps.toFixed(1)} | min ${minFps.toFixed(1)} | heap growth ${memGrowth}MB | errors ${errors.length} | pedsOk ${!!pedsOk}`);
-for (const e of errors.slice(0, 8)) console.log('  ERR:', e.slice(0, 250));
-await browser.close();
 // NOTE: Actions runners have NO GPU — SwiftShader software rendering gives
 // ~3fps at medium. FPS is informational; real gates = errors + leaks + peds.
 // avgFps > 1 sirf "page hang" catch karne ke liye hai.
-const pedsOk = lastPeds && lastPeds.count > 0
-  && (lastPeds.walking + lastPeds.panicking + lastPeds.down) === lastPeds.count;
+const pedsOk = !!(lastPeds && lastPeds.count > 0
+  && (lastPeds.walking + lastPeds.panicking + lastPeds.down) === lastPeds.count);
+console.log(`--- RESULT: avg fps ${avgFps.toFixed(1)} | min ${minFps.toFixed(1)} | heap growth ${memGrowth}MB | errors ${errors.length} | pedsOk ${pedsOk}`);
+for (const e of errors.slice(0, 8)) console.log('  ERR:', e.slice(0, 250));
+await browser.close();
 const ok = errors.length === 0 && memGrowth < 150 && avgFps > 1 && pedsOk;
 console.log(ok ? 'STRESS TEST PASSED ✅' : 'STRESS TEST FAILED ❌');
 process.exitCode = ok ? 0 : 1;
