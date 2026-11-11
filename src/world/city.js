@@ -64,7 +64,8 @@ function colored(geo, hex) {
 const boxAt = (w, h, d, x, y, z, hex) => colored(new THREE.BoxGeometry(w, h, d), hex).translate(x, y, z);
 const cylAt = (rt, rb, h, seg, x, y, z, hex) => colored(new THREE.CylinderGeometry(rt, rb, h, seg), hex).translate(x, y, z);
 
-export function buildCity(scene, world) {
+export function buildCity(scene, world, opts = {}) {
+  const g560build = opts.profile === 'g560'; // build-time cuts (approved: G560 aggressive)
   const ROADS = roadCoords(); // shared for X and Z axes
   const collidableMeshes = [];
 
@@ -85,8 +86,40 @@ export function buildCity(scene, world) {
     return g;
   };
   let ADD = scene;                 // current static-add target (block chunk)
-  const add = (o) => ADD.add(o);
   let viewDist = 260;              // quality tier se override (setPerf)
+  let viewPad = 45;                // chunk visibility padding (g560: 24)
+  let detailLod = false;           // g560: door chunks ke detail-props hide
+
+  // ---- STATIC MERGE BUCKETS (60fps mission) ----
+  // Har chunk ka static geometry per-(material, attribute-set, shadow/collide
+  // flags) bucket mein jaata hai; build ke end par ek hi merged mesh banta hai.
+  // 314 draws ka ilaaj. Runtime-referenced cheezein userData.noMerge se bypass.
+  const buckets = new Map();       // chunkGroup -> Map(key -> entry)
+  const _bucket = (chunk, mesh) => {
+    mesh.updateMatrix();
+    const geo = mesh.geometry.clone().applyMatrix4(mesh.matrix);
+    const attrs = Object.keys(geo.attributes).sort().join('+');
+    const key = mesh.material.uuid + '|' + attrs + '|'
+      + (mesh.castShadow ? 1 : 0) + (mesh.receiveShadow ? 1 : 0)
+      + (mesh.userData.collidable ? 1 : 0);
+    let per = buckets.get(chunk);
+    if (!per) { per = new Map(); buckets.set(chunk, per); }
+    let e = per.get(key);
+    if (!e) {
+      e = { mat: mesh.material, geos: [], cast: mesh.castShadow,
+            receive: mesh.receiveShadow, col: !!mesh.userData.collidable };
+      per.set(key, e);
+    }
+    e.geos.push(geo);
+  };
+  const _addOne = (o) => {
+    if (o && o.isMesh && !o.userData.noMerge && o.geometry && o.geometry.attributes.position) {
+      _bucket(ADD, o);
+      return;
+    }
+    ADD.add(o);
+  };
+  const add = (...os) => os.forEach(_addOne);   // variadic — bridge water/pillar bug bhi fix
 
   // ---------------------------------------------------------- physics mats
   const groundMat = new CANNON.Material('ground');
@@ -284,33 +317,24 @@ export function buildCity(scene, world) {
     envMapIntensity: 0.5,
   });
   const LEN = EXTENT * 2 + 30;
-  for (const rx of ROADS) {
-    const g = new THREE.PlaneGeometry(ROAD, LEN);
-    const m = new THREE.Mesh(g, roadMat);
-    m.rotation.x = -Math.PI / 2;
-    m.position.set(rx, 0.02, 0);
-    m.receiveShadow = true;
-    scene.add(m);
-    m.material.map.repeat.set(1, 1);
-    // fix repeat per length: texture tile = 16m
-    const t = roadMat.map;
-    // (planes share material; set via geometry UV instead)
-    const uv = g.attributes.uv;
+  // 60fps: saare 16 road-planes ek hi merged geometry (16 draws -> 1)
+  const roadGeos = [];
+  const tileUV = (g) => {
+    const uv = g.attributes.uv;   // texture tile = 16m
     for (let i = 0; i < uv.count; i++) uv.setY(i, uv.getY(i) * (LEN / 16));
-    uv.needsUpdate = true;
+    return g;
+  };
+  for (const rx of ROADS) {
+    roadGeos.push(tileUV(new THREE.PlaneGeometry(ROAD, LEN)
+      .rotateX(-Math.PI / 2).translate(rx, 0.02, 0)));
   }
   for (const rz of ROADS) {
-    const g = new THREE.PlaneGeometry(ROAD, LEN);
-    const uv = g.attributes.uv;
-    for (let i = 0; i < uv.count; i++) uv.setY(i, uv.getY(i) * (LEN / 16));
-    uv.needsUpdate = true;
-    const m = new THREE.Mesh(g, roadMat);
-    m.rotation.x = -Math.PI / 2;
-    m.rotation.z = Math.PI / 2;
-    m.position.set(0, 0.021, rz);
-    m.receiveShadow = true;
-    scene.add(m);
+    roadGeos.push(tileUV(new THREE.PlaneGeometry(ROAD, LEN)
+      .rotateX(-Math.PI / 2).rotateY(Math.PI / 2).translate(0, 0.021, rz)));
   }
+  const roadMesh = new THREE.Mesh(mergeGeometries(roadGeos, false), roadMat);
+  roadMesh.receiveShadow = true;
+  scene.add(roadMesh);
 
   // ------------------------------------------------------- helpers
   const staticBox = (hx, hy, hz, x, y, z, quat) => {
@@ -426,7 +450,7 @@ export function buildCity(scene, world) {
   function addBuilding(cx, cz, w, d, h, variant, pad) {
     const y0 = 0.18;
     const geos = [];
-    const bodyMat = facades[variant];
+    const bodyMat = facades[g560build ? variant & 1 : variant]; // g560: 2 materials
 
     // ---- podium: street-retail base, wider than the tower ----
     const podH = Math.min(h * 0.3, rand(5.5, 8.5));
@@ -434,11 +458,11 @@ export function buildCity(scene, world) {
     const podW = w + e * 2, podD = d + e * 2;
     const podGeo = new THREE.BoxGeometry(podW, podH, podD);
     scaleBoxUVs(podGeo, Math.max(podW, podD) / 12, 1);
-    const pod = new THREE.Mesh(podGeo, podiumMats[Math.floor(srand() * podiumMats.length)]);
+    const pod = new THREE.Mesh(podGeo, podiumMats[g560build ? 0 : Math.floor(srand() * podiumMats.length)]);
     pod.position.set(cx, y0 + podH / 2, cz);
     pod.castShadow = true; pod.receiveShadow = true;
+    pod.userData.collidable = true;   // bucket finalize collidable list mein daalega
     add(pod);
-    collidableMeshes.push(pod);
 
     // ---- tower tiers (setbacks on tall buildings) ----
     const bodyH = h - podH;
@@ -451,8 +475,8 @@ export function buildCity(scene, world) {
       const m = new THREE.Mesh(g, bodyMat);
       m.position.set(cx, baseY + th / 2, cz);
       m.castShadow = true; m.receiveShadow = true;
+      m.userData.collidable = true;
       add(m);
-      collidableMeshes.push(m);
       return baseY + th;
     };
     let topY = mkTier(w, d, t1H, y0 + podH);
@@ -460,13 +484,13 @@ export function buildCity(scene, world) {
     staticBox(podW / 2, podH / 2, podD / 2, cx, y0 + podH / 2, cz);
     staticBox(w / 2, t1H / 2, d / 2, cx, y0 + podH + t1H / 2, cz);
 
-    // corner pilasters - vertical rhythm on the main tier
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    // corner pilasters - vertical rhythm on the main tier (g560: skip, tris bachao)
+    if (!g560build) for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
       geos.push(boxAt(0.5, t1H, 0.5, cx + sx * (w / 2 + 0.12), y0 + podH + t1H / 2, cz + sz * (d / 2 + 0.12), 0x3d434c));
     }
 
     // balconies on residential variants
-    if ((variant === 1 || variant === 3) && bodyH > 12 && bodyH < 42) {
+    if (!g560build && (variant === 1 || variant === 3) && bodyH > 12 && bodyH < 42) {
       const floors = Math.floor(bodyH / 3.1);
       for (let f = 1; f <= floors; f++) {
         const by = y0 + podH + f * 3.1 - 0.45;
@@ -501,6 +525,7 @@ export function buildCity(scene, world) {
     if (h > 44) {
       const b = new THREE.Mesh(new THREE.SphereGeometry(0.55, 8, 6), beaconMat);
       b.position.set(cx, beaconY, cz);
+      b.userData.noMerge = true;   // beacon animate hota hai — alag mesh raho
       add(b);
       beacons.push(b);
     }
@@ -834,27 +859,20 @@ export function buildCity(scene, world) {
   const lampLights = [];
   let lampIndex = 0;
   function addLamp(x, z, dirX, dirZ) {
-    const g = new THREE.Group();
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.13, 5.6, 8), poleMat);
-    pole.position.y = 2.8; pole.castShadow = true;
-    g.add(pole);
-    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.8, 6), poleMat);
-    arm.rotation.z = Math.PI / 2;
-    arm.rotation.y = Math.atan2(dirX, dirZ) + Math.PI / 2;
-    // orient arm toward road
-    arm.rotation.set(0, 0, Math.PI / 2);
-    arm.rotation.y = 0;
-    const armWrap = new THREE.Group();
-    arm.position.x = 0.9;
-    armWrap.add(arm);
-    armWrap.position.y = 5.5;
-    armWrap.rotation.y = Math.atan2(dirX, dirZ) - Math.PI / 2;
-    g.add(armWrap);
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.2, 0.3), lampHeadMat);
-    head.position.set(dirX * 1.7, 5.45, dirZ * 1.7);
-    g.add(head);
-    g.position.set(x, 0, z);
-    chunkAt(x, z).add(g);
+    // 60fps: lamp group nahi — parts seedha chunk bucket mein merge
+    const lampChunk = chunkAt(x, z);
+    const put = (geo, mat, px, py, pz, ry, rz, cast) => {
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(px, py, pz);
+      if (ry || rz) m.rotation.set(0, ry || 0, rz || 0);
+      m.castShadow = !!cast;
+      _bucket(lampChunk, m);
+    };
+    put(new THREE.CylinderGeometry(0.09, 0.13, 5.6, 8), poleMat, x, 2.8, z, 0, 0, true);
+    const ay = Math.atan2(dirX, dirZ) - Math.PI / 2;
+    put(new THREE.CylinderGeometry(0.07, 0.07, 1.8, 6), poleMat,
+      x + Math.cos(ay) * 0.9, 5.5, z - Math.sin(ay) * 0.9, ay, Math.PI / 2, false);
+    put(new THREE.BoxGeometry(0.66, 0.2, 0.3), lampHeadMat, x + dirX * 1.7, 5.45, z + dirZ * 1.7, 0, 0, false);
     staticBox(0.14, 2.8, 0.14, x, 2.8, z);
     if (lampIndex % 3 === 0) {
       const l = new THREE.PointLight(0xffd9a0, 40, 42, 1.8);
@@ -989,8 +1007,8 @@ export function buildCity(scene, world) {
       mesh.position.set(cx, 0.55, cz + dz);
       mesh.rotation.x = ang;
       mesh.castShadow = true; mesh.receiveShadow = true;
+      mesh.userData.collidable = true;
       add(mesh);
-      collidableMeshes.push(mesh);
       const q = new CANNON.Quaternion();
       q.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), ang);
       staticBox(4.5, 0.25, 5.5, cx, 0.55, cz + dz, q);
@@ -1053,9 +1071,15 @@ export function buildCity(scene, world) {
 
     // ---- chunk streaming: door wale chunks hide (draw calls bounded) ----
     if (focus) {
-      const vd = viewDist + 45;
+      const vd = viewDist + viewPad;
       for (const g of chunks.values()) {
-        g.visible = Math.hypot(g.userData.cx - focus.x, g.userData.cz - focus.z) < vd;
+        const d = Math.hypot(g.userData.cx - focus.x, g.userData.cz - focus.z);
+        g.visible = d < vd;
+        // g560 detail-LOD: 95m se door chunk-details chhupo (fog cover karta hai)
+        if (detailLod) {
+          const far = d > 95;
+          for (const ch of g.children) if (ch.userData.isDetail) ch.visible = !far;
+        }
       }
     }
 
@@ -1138,7 +1162,22 @@ export function buildCity(scene, world) {
   }
 
   // perf switching for weak hardware (g560 tier): cap dynamic lights, hide skyline
-  function setPerf({ maxLights = Infinity, skyline = true, viewDist: vd } = {}) {
+  function setPerf({ maxLights = Infinity, skyline = true, viewDist: vd, aniso, viewPad: vp, detailLod: dl } = {}) {
+    if (dl !== undefined) detailLod = dl;
+    if (vp !== undefined) viewPad = vp;
+    if (aniso !== undefined) {
+      // g560: anisotropic filtering band — old GPUs pe free bandwidth bachao
+      scene.traverse((o) => {
+        if (!o.isMesh || !o.material) return;
+        const mats = Array.isArray(o.material) ? o.material : [o.material];
+        for (const mm of mats) {
+          for (const k of ['map', 'emissiveMap', 'roughnessMap', 'normalMap', 'aoMap']) {
+            const t = mm[k];
+            if (t && t.anisotropy !== aniso) { t.anisotropy = aniso; t.needsUpdate = true; }
+          }
+        }
+      });
+    }
     if (vd) viewDist = vd;
     let n = 0;
     for (const l of [...lampLights, ...neonLights]) {
@@ -1158,6 +1197,18 @@ export function buildCity(scene, world) {
     let vis = 0;
     for (const g of chunks.values()) if (g.visible) vis++;
     return { total: chunks.size, visible: vis };
+  }
+
+  // ---- finalize: per-(chunk, material, flags) merged meshes ----
+  for (const [chunkGrp, per] of buckets) {
+    for (const e of per.values()) {
+      const mm = new THREE.Mesh(mergeGeometries(e.geos, false), e.mat);
+      mm.castShadow = e.cast;
+      mm.receiveShadow = e.receive;
+      mm.userData.isDetail = e.mat === detailMat; // g560 LOD target
+      chunkGrp.add(mm);
+      if (e.col) collidableMeshes.push(mm);
+    }
   }
 
   return {

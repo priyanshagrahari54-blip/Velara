@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // ---------------------------------------------------------------------------
 // VELARA pedestrians — sidewalk NPCs (visual-only, no physics bodies).
@@ -17,6 +18,7 @@ const SHIRT = [0xb03a3a, 0x3a5fb0, 0x3ab06a, 0xc9c9c9, 0x2a2a2a, 0xd8b04a, 0x7a4
 const PANTS = [0x2a3040, 0x30302a, 0x1f2430, 0x4a3a2a]
   .map((c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9 }));
 
+const PED_MAT = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.88 });
 const SIDE = 9.5; // sidewalk offset from road centerline (ROAD/2 + 1.5m)
 
 export class PedestrianSystem {
@@ -27,20 +29,32 @@ export class PedestrianSystem {
     this.panicPoints = panicPoints;
     this.getFocus = getFocus;
     this.peds = [];
+    this.stagger = false;   // g560: half-rate sim (render stays 60fps)
+    this._skip = false;
     for (let i = 0; i < count; i++) this.peds.push(this._makePed());
     this.reset();
   }
 
   _makePed() {
     const group = new THREE.Group();
-    const skin = SKIN[(Math.random() * SKIN.length) | 0];
-    const shirt = SHIRT[(Math.random() * SHIRT.length) | 0];
-    const pants = PANTS[(Math.random() * PANTS.length) | 0];
+    const skin = SKIN[(Math.random() * SKIN.length) | 0].color.getHex();
+    const shirt = SHIRT[(Math.random() * SHIRT.length) | 0].color.getHex();
+    const pants = PANTS[(Math.random() * PANTS.length) | 0].color.getHex();
 
-    const mkLimb = (w, h, d, mat, px, py) => {
-      const geo = new THREE.BoxGeometry(w, h, d);
+    // 60fps: vertex-colors + EK shared material (program switches zero).
+    // torso+head merged (6 -> 5 meshes); limbs pivot-animation ke liye alag.
+    const colGeo = (geo, hex) => {
+      const n = geo.attributes.position.count;
+      const arr = new Float32Array(n * 3);
+      const c = new THREE.Color(hex);
+      for (let i = 0; i < n; i++) { arr[i*3] = c.r; arr[i*3+1] = c.g; arr[i*3+2] = c.b; }
+      geo.setAttribute('color', new THREE.BufferAttribute(arr, 3));
+      return geo;
+    };
+    const mkLimb = (w, h, d, hex, px, py) => {
+      const geo = colGeo(new THREE.BoxGeometry(w, h, d), hex);
       geo.translate(0, -h / 2, 0); // pivot at top (hip / shoulder)
-      const m = new THREE.Mesh(geo, mat);
+      const m = new THREE.Mesh(geo, PED_MAT);
       m.position.set(px, py, 0);
       return m;
     };
@@ -48,13 +62,12 @@ export class PedestrianSystem {
     const legR = mkLimb(0.13, 0.55, 0.15, pants, -0.10, 0.55);
     const armL = mkLimb(0.10, 0.48, 0.12, shirt, 0.27, 1.12);
     const armR = mkLimb(0.10, 0.48, 0.12, shirt, -0.27, 1.12);
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.60, 0.24), shirt);
-    torso.position.y = 0.85;
-    torso.castShadow = true;
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.155, 8, 6), skin);
-    head.position.y = 1.31;
-    head.castShadow = true;
-    group.add(legL, legR, armL, armR, torso, head);
+    const core = new THREE.Mesh(mergeGeometries([
+      colGeo(new THREE.BoxGeometry(0.42, 0.60, 0.24).translate(0, 0.85, 0), shirt),
+      colGeo(new THREE.SphereGeometry(0.155, 8, 6).translate(0, 1.31, 0), skin),
+    ], false), PED_MAT);
+    core.castShadow = true;
+    group.add(legL, legR, armL, armR, core);
     this.scene.add(group);
     return {
       group, legL, legR, armL, armR,
@@ -96,6 +109,12 @@ export class PedestrianSystem {
   }
 
   update(dt) {
+    // g560: alternate frames skip, dt x2 se speed same rehta hai
+    if (this.stagger) {
+      this._skip = !this._skip;
+      if (this._skip) return;
+      dt = dt * 2;
+    }
     const f = this.getFocus();
     for (const p of this.peds) {
       // ---- knocked down: girna, laitna, uthna ----

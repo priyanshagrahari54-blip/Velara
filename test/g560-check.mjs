@@ -30,12 +30,17 @@ const r = await page.evaluate(() => {
     pointLights, skylineVisible,
     camY: +g.camera.position.y.toFixed(2),
     profile: g.profile,
+    draws: (() => { // 60fps mission: draw-call budget CI mein hi guard ho
+      g.renderer.info.reset();
+      g.renderer.render(g.scene, g.camera);
+      return g.renderer.info.render.calls;
+    })(),
   };
 });
 console.log(JSON.stringify(r));
 console.log('console errors:', errors.length, errors.slice(0, 3));
 await browser.close();
-const ok = r.tier === 'g560' && r.pointLights <= 11 // 8 capped + fountain + muzzle-flash + range sign && r.skylineVisible === 0
-  && r.camY < 3.5 && errors.length === 0;
+const ok = r.tier === 'g560' && r.pointLights <= 11 // 5 capped + fountain + muzzle-flash + range sign && r.skylineVisible === 0
+  && r.camY < 3.5 && errors.length === 0 && r.draws <= 200;
 console.log(ok ? 'G560 CHECK PASSED ✅' : 'G560 CHECK FAILED ❌');
 process.exit(ok ? 0 : 1);

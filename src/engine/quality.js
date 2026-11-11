@@ -12,6 +12,7 @@ const TIERS = {
     shadows: true,
     bloom: 0.55,
     viewDist: 260,
+    far: 2200, trafficCap: 10, aniso: 4, viewPad: 45,
   },
   medium: {
     label: 'MEDIUM',
@@ -21,6 +22,7 @@ const TIERS = {
     bloom: 0.32,
     maxLights: 22,
     viewDist: 200,
+    far: 1600, trafficCap: 10, aniso: 4, viewPad: 45,
   },
   low: {
     label: 'LOW (fast)',
@@ -30,6 +32,7 @@ const TIERS = {
     bloom: 0,
     maxLights: 14,
     viewDist: 150,
+    far: 900, trafficCap: 8, aniso: 2, viewPad: 36,
   },
   g560: {
     label: 'G560 (max speed)',
@@ -37,9 +40,11 @@ const TIERS = {
     shadowMapSize: 256,
     shadows: false,
     bloom: 0,
-    maxLights: 8,          // cap street-lamp/neon point lights (28 -> 8)
+    maxLights: 5,          // cap street-lamp/neon point lights (fragment sasta)
+    detailLod: true,        // 95m+ door chunk-details hide (fog cover karta hai)
     skyline: false,        // hide the 34 distant skyline boxes
     viewDist: 120,
+    far: 520, trafficCap: 6, aniso: 1, viewPad: 24,
   },
 };
 

@@ -69,7 +69,7 @@ export class VelaraGame {
     // -------------------------------------------------------- world
     this.env = createEnvironment(this.scene, this.renderer);
     this.env.setTime('dusk'); // boot into GOLDEN HOUR with a cinematic 2.5s transition
-    this.city = buildCity(this.scene, this.world);
+    this.city = buildCity(this.scene, this.world, { profile: this.profile });
     this.player = new Player(this.scene, this.world, this.city.groundMat, PLAYER_SPAWN);
     this.world.addContactMaterial(new CANNON.ContactMaterial(
       this.player.physMat, this.city.groundMat, { friction: 0.0, restitution: 0.0 }));
@@ -85,7 +85,7 @@ export class VelaraGame {
     // would explode the shader cost (SwiftShader OOM in smoke test)
     this._applyActiveVehicle();
 
-    this.traffic = new TrafficSystem(this.scene, this.world, this.city.ROADS, EXTENT, this.city);
+    this.traffic = new TrafficSystem(this.scene, this.world, this.city.ROADS, EXTENT, this.city, { profile: this.profile });
     // pedestrians: sidewalk NPCs — panic on gunfire, knockdown by cars,
     // recycle around player (GTA-style density). g560 = 10 peds, else 22.
     this.peds = new PedestrianSystem(
@@ -175,9 +175,16 @@ export class VelaraGame {
         this.postfx.bloom.enabled = cfg.bloom > 0;
         this.postfx.bloom.strength = cfg.bloom;
       }
+      // g560/60fps: chhota far-plane (fog 150 ke baad kuch nahi dikhta),
+      // kam anisotropy, chhota chunk pad, traffic cap, ped stagger
+      this.camera.far = cfg.far || 2200;
+      this.camera.updateProjectionMatrix();
       if (this.city && this.city.setPerf) {
-        this.city.setPerf({ maxLights: cfg.maxLights, skyline: cfg.skyline, viewDist: cfg.viewDist });
+        this.city.setPerf({ maxLights: cfg.maxLights, skyline: cfg.skyline, viewDist: cfg.viewDist,
+          aniso: cfg.aniso, viewPad: cfg.viewPad, detailLod: cfg.detailLod });
       }
+      if (this.traffic && this.traffic.setPerf) this.traffic.setPerf({ maxCars: cfg.trafficCap });
+      if (this.peds) this.peds.stagger = this.quality.tier === 'g560';
       this._resize();
     };
     this.quality.bootstrap(this.ui.isTouch);
@@ -476,6 +483,22 @@ export class VelaraGame {
     if (this.state === 'playing') {
       this._update(dt);
       this.quality.frame(dt);
+      // ---- g560 dynamic resolution: 60fps ke peeche (0.38..0.55 auto) ----
+      if (this.quality.tier === 'g560' && this.state !== 'start') {
+        this._dynT = (this._dynT || 0) + dt;
+        if (this._dynT > 2) {
+          this._dynT = 0;
+          const f = this.quality.fps;
+          const cur = this._dynScale || this.quality.config.pixelRatio;
+          const nxt = Math.min(this.quality.config.pixelRatio,
+            Math.max(0.38, cur + (f < 52 ? -0.05 : f > 58 ? 0.05 : 0)));
+          if (Math.abs(nxt - cur) > 0.001) {
+            this._dynScale = nxt;
+            this.renderer.setPixelRatio(nxt);
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
+          }
+        }
+      }
     }
     if (this._noRender) return; // test hook: logic-only stepping (no GPU work)
     // start screen: the 3D backdrop renders at ~20fps (saves battery /
@@ -668,7 +691,11 @@ export class VelaraGame {
     this.cameraRig.update(dt);
 
     // ------------------------------------------------------------ minimap
-    this.ui.drawMinimap({
+    // g560: 8Hz redraw kaafi hai — 60fps ke liye canvas-2D cost kaato
+    this._mmT = (this._mmT || 0) + dt;
+    if (this.quality.tier !== 'g560' || this._mmT > 0.125) {
+      this._mmT = 0;
+      this.ui.drawMinimap({
       extent: EXTENT,
       roadsX: this.city.ROADS,
       roadsZ: this.city.ROADS,
@@ -681,6 +708,7 @@ export class VelaraGame {
       pickups: this.city.pickups.map((p) => ({ x: p.x, z: p.z, taken: p.taken })),
       targets: this.range.minimapData(),
     });
+    }
   }
 
   _mapYaw() {

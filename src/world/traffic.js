@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // ---------------------------------------------------------------------------
 // VELARA traffic: dynamic servo-driven AI cars on the road grid.
@@ -10,58 +11,86 @@ import * as CANNON from 'cannon-es';
 
 const PALETTE = [0x8a2f2f, 0x2f4d8a, 0x3a6b46, 0x777d88, 0x4b3a6e, 0x9a7b2f, 0x24313d, 0x6b6b3a];
 
-function buildCarMesh(color) {
+// ---- shared geometry/materials: har car naya GPU resource nahi banata ----
+const WHEEL_GEO = (() => {
+  const g = new THREE.CylinderGeometry(0.37, 0.37, 0.28, 12);
+  g.rotateZ(Math.PI / 2);
+  return g;
+})();
+const WHEELBLOCK_GEO = (() => mergeGeometries(
+  [[0.86, -1.4], [-0.86, -1.4], [0.86, 1.4], [-0.86, 1.4]]
+    .map(([wx, wz]) => WHEEL_GEO.clone().translate(wx, 0.37, wz)), false))();
+const LIGHTS_GEO = (() => {
+  const mk = (w, h, d, x, y, z, hex) => {
+    const g = new THREE.BoxGeometry(w, h, d);
+    const n = g.attributes.position.count;
+    const arr = new Float32Array(n * 3);
+    const c = new THREE.Color(hex);
+    for (let i = 0; i < n; i++) { arr[i*3] = c.r; arr[i*3+1] = c.g; arr[i*3+2] = c.b; }
+    g.setAttribute('color', new THREE.BufferAttribute(arr, 3));
+    return g.translate(x, y, z);
+  };
+  return mergeGeometries([
+    mk(0.4, 0.12, 0.06, 0.58, 0.66, -2.18, 0xd8ecff),
+    mk(0.4, 0.12, 0.06, -0.58, 0.66, -2.18, 0xd8ecff),
+    mk(0.36, 0.1, 0.06, 0.58, 0.68, 2.18, 0xdd1122),
+    mk(0.36, 0.1, 0.06, -0.58, 0.68, 2.18, 0xdd1122),
+  ], false);
+})();
+const LIGHTS_MAT = new THREE.MeshBasicMaterial({ vertexColors: true });
+const GLASS_MAT = new THREE.MeshPhysicalMaterial({ color: 0x070a10, metalness: 0.9, roughness: 0.08 });
+const WHEEL_MAT = new THREE.MeshStandardMaterial({ color: 0x0b0c0d, roughness: 0.9 });
+const paintCache = new Map();
+
+function buildCarMesh(color, spinWheels) {
   const g = new THREE.Group();
-  const paint = new THREE.MeshPhysicalMaterial({
-    color, metalness: 0.7, roughness: 0.35, clearcoat: 0.8, envMapIntensity: 1.1,
-  });
-  const glass = new THREE.MeshPhysicalMaterial({ color: 0x070a10, metalness: 0.9, roughness: 0.08 });
+  let paint = paintCache.get(color);
+  if (!paint) {
+    paint = new THREE.MeshPhysicalMaterial({
+      color, metalness: 0.7, roughness: 0.35, clearcoat: 0.8, envMapIntensity: 1.1,
+    });
+    paintCache.set(color, paint);
+  }
   const body = new THREE.Mesh(new THREE.BoxGeometry(1.84, 0.55, 4.35), paint);
   body.position.y = 0.62;
   body.castShadow = true;
-  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.5, 2.1), glass);
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.5, 2.1), GLASS_MAT);
   cabin.position.set(0, 1.08, 0.15);
   cabin.castShadow = true;
-  const hl = new THREE.MeshBasicMaterial({ color: 0xd8ecff });
-  const tl = new THREE.MeshBasicMaterial({ color: 0xdd1122 });
-  for (const sx of [0.58, -0.58]) {
-    const h = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.12, 0.06), hl);
-    h.position.set(sx, 0.66, -2.18);
-    g.add(h);
-    const t = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.1, 0.06), tl);
-    t.position.set(sx, 0.68, 2.18);
-    g.add(t);
-  }
-  const wheelGeo = new THREE.CylinderGeometry(0.37, 0.37, 0.28, 12);
-  wheelGeo.rotateZ(Math.PI / 2);
-  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x0b0c0d, roughness: 0.9 });
+  g.add(body, cabin, new THREE.Mesh(LIGHTS_GEO, LIGHTS_MAT));
   const wheels = [];
-  for (const [wx, wz] of [[0.86, -1.4], [-0.86, -1.4], [0.86, 1.4], [-0.86, 1.4]]) {
-    const w = new THREE.Mesh(wheelGeo, wheelMat);
-    w.position.set(wx, 0.37, wz);
-    g.add(w);
-    wheels.push(w);
+  if (spinWheels) {
+    for (const [wx, wz] of [[0.86, -1.4], [-0.86, -1.4], [0.86, 1.4], [-0.86, 1.4]]) {
+      const w = new THREE.Mesh(WHEEL_GEO, WHEEL_MAT);
+      w.position.set(wx, 0.37, wz);
+      g.add(w);
+      wheels.push(w);
+    }
+  } else {
+    g.add(new THREE.Mesh(WHEELBLOCK_GEO, WHEEL_MAT)); // g560: 1 draw, spin off
   }
-  g.add(body, cabin);
   return { g, wheels };
 }
 
 export class TrafficSystem {
-  constructor(scene, world, ROADS, EXTENT, city) {
+  constructor(scene, world, ROADS, EXTENT, city, opts = {}) {
     this.ROADS = ROADS;
     this.EXTENT = EXTENT;
     this.city = city; // signal state ke liye (trafficLightGo)
     this.cars = [];
+    this.scene = scene;   // setPerf: cars hatane ke liye
+    this.world = world;
+    this.spinWheels = opts.profile !== 'g560';
     this.trafficMat = new CANNON.Material('traffic');
 
-    const count = 10; // bade city mein zyada density
+    const count = opts.profile === 'g560' ? 6 : 10; // g560: kam traffic
     for (let i = 0; i < count; i++) {
       const axis = i % 2 === 0 ? 'z' : 'x';
       const road = ROADS[1 + Math.floor(Math.random() * (ROADS.length - 2))];
       const dir = Math.random() < 0.5 ? 1 : -1;
       const lane = 3.6 * dir;
       const base = 8 + Math.random() * 7;
-      const { g, wheels } = buildCarMesh(PALETTE[i % PALETTE.length]);
+      const { g, wheels } = buildCarMesh(PALETTE[i % PALETTE.length], this.spinWheels);
 
       const body = new CANNON.Body({
         mass: 1500,
@@ -140,7 +169,17 @@ export class TrafficSystem {
       car.mesh.position.y = 0;
       car.mesh.rotation.y = car.yaw;
       const spin = (car.speed * dt) / 0.37;
-      for (const w of car.wheels) w.rotation.x += spin;
+      if (car.wheels.length) for (const w of car.wheels) w.rotation.x += spin;
+    }
+  }
+
+  /** Quality hook — g560 traffic cap: extra cars scene+world se remove. */
+  setPerf({ maxCars } = {}) {
+    if (maxCars === undefined) return;
+    while (this.cars.length > maxCars) {
+      const c = this.cars.pop();
+      this.scene.remove(c.mesh);
+      if (c.body) this.world.removeBody(c.body);
     }
   }
 
