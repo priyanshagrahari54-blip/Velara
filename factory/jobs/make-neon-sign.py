@@ -86,7 +86,7 @@ def build():
 
     # ---- neon text (built-in font, extruded tube look) ----
     cd = bpy.data.curves.new("NeonText", type="FONT")
-    cd.body_text = "VELARA"
+    cd.body = "VELARA"
     cd.extrude = 0.045
     cd.bevel_depth = 0.012
     cd.bevel_resolution = 2

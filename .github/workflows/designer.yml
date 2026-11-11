@@ -113,18 +113,18 @@ jobs:
           if [ -f /tmp/results.txt ]; then
             while IFS='|' read -r qf jid status; do
               [ -z "$jid" ] && continue
-              python3 - "$qf" "$jid" "$status" <<'PYUPD'
+              python3 -c '
               import json, sys, hashlib, os
               qf, jid, status = sys.argv[1:4]
               j = json.load(open(qf))
               j["status"] = status
-              glb = f"factory/out/{jid}.glb"
+              glb = "factory/out/%s.glb" % jid
               if status == "done" and os.path.exists(glb):
                   j["result"] = glb
                   j["bytes"] = os.path.getsize(glb)
                   j["sha256"] = hashlib.sha256(open(glb, "rb").read()).hexdigest()[:16]
               json.dump(j, open(qf, "w"), indent=1)
-              PYUPD
+              ' "$qf" "$jid" "$status"
             done < /tmp/results.txt
           fi
           git config user.name "designer-bot"
