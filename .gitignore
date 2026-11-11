@@ -3,3 +3,4 @@ dist/
 .cache/
 *.zip
 ALL-IMAGES.html
+.ghtoken
