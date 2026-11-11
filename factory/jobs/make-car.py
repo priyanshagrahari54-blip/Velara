@@ -323,14 +323,16 @@ def build():
                          ("WheelRL", -1, -1), ("WheelRR", 1, -1)):
         wheels.append(wheel_at(name, sx * (W / 2 - 0.10), sy * P["wheelbase"] / 2))
 
-    # merge per-material parts
+    # merge per-material parts (DESELECT pehle — warna join wheels ko nigal jaata hai!)
     def merge_join(parts, name):
         if not parts:
             return None
+        bpy.ops.object.select_all(action="DESELECT")
         for p in parts:
             p.select_set(True)
         bpy.context.view_layer.objects.active = parts[0]
-        bpy.ops.object.join()
+        if len(parts) > 1:
+            bpy.ops.object.join()
         o = bpy.context.active_object
         o.name = name
         return o
