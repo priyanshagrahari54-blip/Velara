@@ -353,7 +353,7 @@ def wire():
     nn = next(n for n in nt.nodes if n.type == "TEX_IMAGE" and n.image
               and n.image.name == "N_bake")
     nm = nt.nodes.new("ShaderNodeNormalMap")
-    nm.strength = 1.0
+    set_input(nm, ["Strength"], 1.0)   # 4.5: socket hai, .strength property nahi
     nt.links.new(nn.outputs["Color"], nm.inputs["Color"])
     nt.links.new(nm.outputs["Normal"], bsdf.inputs["Normal"])
     return "AO->base, noise->rough, normal->bump"
