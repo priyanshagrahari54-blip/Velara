@@ -9,6 +9,11 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# gh-generated ssh key permissions fix (snapshot/restore ke baad 0644 ho jati hai,
+# jisse ssh "UNPROTECTED PRIVATE KEY FILE" bol kar refuse karta hai)
+mkdir -p ~/.ssh && chmod 700 ~/.ssh
+[ -f ~/.ssh/codespaces.auto ] && chmod 600 ~/.ssh/codespaces.auto
+
 GH_VER=2.63.2   # pinned — URL stable, codespace ssh ke liye kaafi
 
 if ! command -v gh >/dev/null 2>&1; then

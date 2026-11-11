@@ -119,7 +119,7 @@ def build():
     lamp.name = "StreetLamp"
 
     # origin ground par (three.js placement easy)
-    bpy.context.cursor.location = (0, 0, 0)
+    bpy.context.scene.cursor.location = (0, 0, 0)   # 4.5: scene.cursor (context.cursor nahi)
     bpy.ops.object.origin_set(type="ORIGIN_CURSOR")
 
     # soft edges (AAA-feel detail)
