@@ -1,0 +1,14 @@
+{
+  "name": "VELARA — Open City Game",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": { "label": "VELARA game (vite dev)", "onAutoForward": "openBrowser" }
+  },
+  "postCreateCommand": "npm install --no-audit --no-fund",
+  "customizations": {
+    "vscode": {
+      "extensions": ["dbaeumer.vscode-eslint"]
+    }
+  }
+}

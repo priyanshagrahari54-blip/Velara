@@ -1,0 +1,23 @@
+name: CI - Build + Smoke Test
+on:
+  push:
+    branches: [main]
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Production build
+        run: npm run build
+      - name: Install headless browser
+        run: npx playwright install --with-deps chromium
+      - name: Boot dev server + full smoke test (0 console errors required)
+        run: |
+          npx vite --port 3000 --host 127.0.0.1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:3000/ >/dev/null && break; sleep 1; done
+          node test/browser-smoke.mjs
