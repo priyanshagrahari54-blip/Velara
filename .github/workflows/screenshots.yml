@@ -1,0 +1,32 @@
+name: Screenshot Farm
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['src/**', 'test/shot-farm.mjs']
+jobs:
+  farm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - name: Boot dev server
+        run: |
+          npx vite --port 3000 --host 127.0.0.1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:3000/ >/dev/null && break; sleep 1; done
+          curl -sf http://localhost:3000/ >/dev/null || { echo "dev server failed"; exit 1; }
+      - name: Capture 6 scenes (crash-isolated)
+        run: |
+          for S in golden street night rain day skyline; do
+            echo "--- capturing: $S"
+            SCENE=$S OUT=shots/$S.png node test/shot-farm.mjs || echo "::warning::scene $S FAILED (continuing)"
+          done
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: velara-shots
+          path: shots/
+          if-no-files-found: error
