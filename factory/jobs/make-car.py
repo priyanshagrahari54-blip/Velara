@@ -291,7 +291,7 @@ def build():
         arr[:, 2] = rgb255[2] / 255.0
         arr[:, 3] = 1.0
         ca = mesh.attributes.new("Col", 'FLOAT_COLOR', 'POINT')
-        ca.data.foreach_set('value', arr.ravel())
+        ca.data.foreach_set('color', arr.ravel())   # color-attrs: 'color', 'value' nahi
         return mesh
 
     def wheel_at(name, x, y):
