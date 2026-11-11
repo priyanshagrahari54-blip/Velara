@@ -15,3 +15,7 @@
 | Concrete034 (1K-JPG) | [ambientCG](https://ambientcg.com/view?id=Concrete034) | Lennart Demes (ambientCG) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | Sidewalk / podium albedo |
 | streetlamp.glb ULTRA (cobra streetlight — high→low normal+AO bake, roughness wear, emissive lens; 58.7KB Draco) | factory/make-streetlamp-ultra.py — Blender asset-factory (codespace/Colab) | VELARA team | CC0 (self-made) | Night-phase hero prop |
 | velara-gt.glb (sports car — tapered cabin, spoiler, normal+AO bake, emissive lights; 38.1KB Draco) | factory/jobs/make-car.py — design team | VELARA team | CC0 (self-made) | Hero vehicle visual |
+| pico-s.glb (yellow compact hatch — tapered cabin, normal+AO bake; 44.9KB Draco) | factory/jobs/make-car.py — design team | VELARA team | CC0 (self-made) | City traffic car |
+| titan-rs.glb (blue muscle coupe — wide stance, normal+AO bake; 44.8KB Draco) | factory/jobs/make-car.py — design team | VELARA team | CC0 (self-made) | City traffic car |
+| colossus-v.glb (green SUV — roof rails, high ground clearance; 44.9KB Draco) | factory/jobs/make-car.py — design team | VELARA team | CC0 (self-made) | City traffic car |
+| neon-sign.glb (VELARA neon signboard — emissive text, night glow render; 13.4KB Draco) | factory/jobs/make-neon-sign.py — design team | VELARA team | CC0 (self-made) | Night-phase street prop |
