@@ -1,5 +1,5 @@
 {
-  "name": "VELARA \u2014 Open City Game",
+  "name": "VELARA — Asset Factory (Blender headless + Node)",
   "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
   "forwardPorts": [
     3000,
@@ -14,7 +14,7 @@
       "label": "Vite default (alias)"
     }
   },
-  "postCreateCommand": "npm install --no-audit --no-fund",
+  "postCreateCommand": "bash .devcontainer/setup-blender.sh",
   "customizations": {
     "vscode": {
       "extensions": [

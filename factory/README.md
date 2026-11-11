@@ -1,0 +1,51 @@
+# VELARA Asset Factory (Codespace + Blender headless)
+
+Codespace = **heavy-kaam worker**: Blender 4.5 LTS (headless, CPU) wahan
+high-quality 3D assets banata hai — model → AO bake → Draco GLB — aur
+sandbox wapas aake game mein integrate karta hai. (Unreal Engine web export
+support nahi karta + codespace specs se engine build possible nahi — isliye
+Blender hi asset engine hai.)
+
+## Files
+| File | Kaam |
+|------|------|
+| `.devcontainer/setup-blender.sh` | Codespace mein Blender 4.5.16 install (idempotent, postCreateCommand) |
+| `factory/make-<asset>.py` | Ek Blender job = ek asset (model+bake+preview+Draco GLB) |
+| `factory/verify-glb.py` | GLB round-trip verify (import karke stats) |
+| `factory/out/` | Codespace-side output (gitignored nahi, par commit sirf final assets) |
+
+## Sandbox-side runbook (har naye turn / reset ke baad)
+```bash
+cd /home/user/velara-city-game
+bash tools/codespace-gh.sh                      # gh CLI install + auth (.ghtoken se)
+NAME=$(cat /home/user/.codespace-name)          # current codespace
+
+# codespace start (agar shutdown ho) — REST se:
+TOKEN=$(tr -d '[:space:]' < .ghtoken)
+curl -s -X POST -H "Authorization: Bearer $TOKEN" \
+  "https://api.github.com/user/codespaces/$NAME/start" | head -c 200
+
+# job chalao (codespace repo-clone already latest main par hota hai):
+GH_TOKEN=$TOKEN gh codespace ssh -c "$NAME" -- \
+  'cd /workspaces/Velara && git pull --ff-only && blender --background --python factory/make-streetlamp.py'
+
+# verify:
+GH_TOKEN=$TOKEN gh codespace ssh -c "$NAME" -- \
+  'cd /workspaces/Velara && blender --background --python factory/verify-glb.py -- factory/out/streetlamp.glb'
+
+# asset sandbox mein laao:
+mkdir -p public/assets/props references
+GH_TOKEN=$TOKEN gh codespace ssh -c "$NAME" -- 'cat /workspaces/Velara/factory/out/streetlamp.glb' > public/assets/props/streetlamp.glb
+GH_TOKEN=$TOKEN gh codespace ssh -c "$NAME" -- 'cat /workspaces/Velara/factory/out/streetlamp_preview.png' > references/STREETLAMP-PREVIEW.png
+```
+
+## Nayi asset recipe
+1. `factory/make-<name>.py` banao (make-streetlamp.py ko template maano).
+2. Commit+push karo, upar wala job-command chalao.
+3. GLB `public/assets/props/` mein lao, ASSETS.md mein entry + `tools/git-push.sh`.
+4. Game integration (three.js GLTFLoader) alag phase mein.
+
+## Quota notes
+- Codespace: 2-core/8GB/32GB. Free tier ~120 core-hr/month → 2-core ~1 hr ≈ 2 core-hr.
+- Idle 30 min par khud shutdown ho jata hai — restart upar wale REST start se.
+- Ek time pe ek hi codespace rakho (delete + create se naya milta hai).
