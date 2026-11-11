@@ -10,10 +10,17 @@ await page.click('#v-play');
 await page.waitForTimeout(3500); // intro (2.4s) + settle
 const r = await page.evaluate(() => {
   const g = window.velara;
+  g.introT = 0; // slow cloud runners: dt-clamp (0.05) intro ko game-time mein
+                // 16s lamba kar deta hai — 3.5s wait kaafi nahi, force-finish
+  const effectivelyVisible = (o) => {   // chunk groups parent.visible se hide
+    let p = o, vis = true;              // hote hain — mesh ka apna flag nahi
+    while (p && vis) { vis = p.visible; p = p.parent; }
+    return vis;
+  };
   let pointLights = 0, skylineVisible = 0;
   g.scene.traverse(o => {
     if (o.isPointLight && o.parent) pointLights++;
-    if (o.isMesh && o.visible && o.material && o.material.emissiveMap
+    if (o.isMesh && effectivelyVisible(o) && o.material && o.material.emissiveMap
         && Math.hypot(o.position.x, o.position.z) > 200) skylineVisible++;
   });
   for (let i = 0; i < 40; i++) g._update(1 / 60);
