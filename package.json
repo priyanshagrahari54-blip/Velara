@@ -1,0 +1,26 @@
+{
+  "name": "velara-city-of-shadows",
+  "productName": "VELARA — City of Shadows",
+  "version": "0.2.0",
+  "description": "VELARA: ultra-realistic open-world city game prototype with full physics. Three.js + Cannon-es. Win7-compatible desktop build included.",
+  "main": "desktop/main.cjs",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 3000",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 3000",
+    "test:physics": "node test/final-check.mjs && node test/cone-test.mjs && node test/player-test.mjs",
+    "test:browser": "node test/browser-smoke.mjs",
+    "package:win": "node tools/package-windows.mjs"
+  },
+  "dependencies": {
+    "cannon-es": "^0.20.0",
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "electron-packager": "^17.1.2",
+    "playwright": "^1.65.0",
+    "vite": "^7.3.4"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,16 @@
+# Single source of truth for studio behaviour (CCGS-style, adapted).
+name: VELARA — City of Shadows
+engine: web-three          # Three.js + Cannon-es + Web Audio, bundled by Vite
+target:
+  web: any WebGL2 browser
+  desktop: Windows 7+ (Lenovo G560 class minimum, Electron 22)
+modes:
+  rigor: standard          # design note -> tests -> implement -> verify -> docs
+  qa:
+    level: strict          # zero console errors, smoke test must pass
+  review:
+    protocol: ask-options-decide-draft-approve
+quality:
+  fps_budget: { high: 60, medium: 45, low: 30 }
+  draw_calls_max: 400
+  triangles_max: 150000
