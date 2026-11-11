@@ -15,7 +15,9 @@ jobs:
       - name: Production build
         run: npm run build
       - name: Install headless browser
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium || npx playwright install chromium
+        # apt/DNS outage-proof: --with-deps fail ho to bina system-deps fallback
+        # (ubuntu-latest image mein core libs pehle se hain; sirf extra fonts miss hote hain)
       - name: Boot dev server + full smoke test (0 console errors required)
         run: |
           npx vite --port 3000 --host 127.0.0.1 &

@@ -20,7 +20,9 @@ jobs:
         run: node test/final-check.mjs && node test/cone-test.mjs && node test/player-test.mjs
       - name: Install chromium (browser suites)
         if: matrix.suite != 'physics'
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium || npx playwright install chromium
+        # apt/DNS outage-proof: --with-deps fail ho to bina system-deps fallback
+        # (ubuntu-latest image mein core libs pehle se hain; sirf extra fonts miss hote hain)
       - name: Boot dev server
         if: matrix.suite != 'physics'
         run: |
