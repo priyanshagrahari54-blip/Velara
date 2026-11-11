@@ -1,10 +1,13 @@
 {
-    "id": "velara-gt",
-    "script": "make-car.py",
-    "args": [
-        "velara-gt"
-    ],
-    "brief": "Velara GT \u2014 low-wide sports car, red paint, spoiler. Hero vehicle (player spawn).",
-    "status": "pending",
-    "priority": 1
+ "id": "velara-gt",
+ "script": "make-car.py",
+ "args": [
+  "velara-gt"
+ ],
+ "brief": "Velara GT \u2014 low-wide sports car, red paint, spoiler. Hero vehicle (player spawn).",
+ "status": "done",
+ "priority": 1,
+ "result": "factory/out/velara-gt.glb",
+ "bytes": 38100,
+ "worker": "codespace"
 }
