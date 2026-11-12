@@ -626,11 +626,7 @@ def render_studio():
     world.use_nodes = True
     wbg = next(n for n in world.node_tree.nodes if n.type == "BACKGROUND")
     set_input(wbg, ["Color"], (0.015, 0.018, 0.03, 1.0))
-    vol = world.node_tree.nodes.new("ShaderNodeVolumePrincipled")
-    set_input(vol, ["Density"], 0.006)
-    wout = next(n for n in world.node_tree.nodes if n.type == "OUTPUT_WORLD")
-    world.node_tree.links.new(vol.outputs["Volume"], wout.inputs["Volume"])
-    scene.world = world
+    scene.world = world   # NO volume — sun + world-volume = black render bug!
 
     dev = setup_cycles(samples=max(48, A["samples"] // 2))
     try:
