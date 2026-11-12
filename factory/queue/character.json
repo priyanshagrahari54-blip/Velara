@@ -1,0 +1,10 @@
+{
+ "id": "character",
+ "script": "make-character.py",
+ "args": [],
+ "brief": "Player character v1 \u2014 hoodie humanoid T-pose (user demand: character rating 0 tha)",
+ "status": "review",
+ "priority": 1,
+ "worker": "codespace",
+ "result": "factory/out/character.glb"
+}
