@@ -5,6 +5,11 @@
   "city-bus"
  ],
  "brief": "User-chosen concept (gallery) \u2014 city-bus",
- "status": "pending",
- "priority": 1
+ "status": "done",
+ "priority": 1,
+ "worker": "actions-cpu",
+ "claimed": 1794491096,
+ "result": "factory/out/city-bus.glb",
+ "bytes": 44504,
+ "sha256": "866582b0049b4dbe"
 }

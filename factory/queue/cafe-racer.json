@@ -5,6 +5,11 @@
   "cafe-racer"
  ],
  "brief": "User-chosen concept (gallery) \u2014 cafe-racer",
- "status": "pending",
- "priority": 1
+ "status": "done",
+ "priority": 1,
+ "worker": "actions-cpu",
+ "claimed": 1794491096,
+ "result": "factory/out/cafe-racer.glb",
+ "bytes": 50816,
+ "sha256": "5e2eaad8833120c9"
 }

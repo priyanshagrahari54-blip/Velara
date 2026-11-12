@@ -5,6 +5,11 @@
   "velara-bike"
  ],
  "brief": "User-chosen concept (gallery) \u2014 velara-bike",
- "status": "pending",
- "priority": 1
+ "status": "done",
+ "priority": 1,
+ "worker": "actions-cpu",
+ "claimed": 1794491096,
+ "result": "factory/out/velara-bike.glb",
+ "bytes": 40832,
+ "sha256": "3b7f475ab57f87e3"
 }

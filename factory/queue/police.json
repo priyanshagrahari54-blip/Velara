@@ -5,6 +5,11 @@
   "police"
  ],
  "brief": "User-chosen concept (gallery) \u2014 police",
- "status": "pending",
- "priority": 1
+ "status": "done",
+ "priority": 1,
+ "worker": "actions-cpu",
+ "claimed": 1794491096,
+ "result": "factory/out/police.glb",
+ "bytes": 47160,
+ "sha256": "efc750024b650e0c"
 }
