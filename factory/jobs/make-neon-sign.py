@@ -227,7 +227,13 @@ def render_studio():
     set_input(wbg, ["Color"], (0.38, 0.40, 0.44, 1.0))
     scene.world = world
 
-    dev = setup_cycles(samples=max(48, A["samples"] // 2))
+    scene.cycles.device = "CPU"
+    scene.cycles.samples = 48
+    try:
+        scene.cycles.use_denoising = True
+    except Exception:
+        pass
+    dev = "CPU"
     try:
         scene.view_settings.exposure = 1.25
     except Exception:
