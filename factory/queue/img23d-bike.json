@@ -5,6 +5,11 @@
  "image_key": "bike",
  "mc_res": 196,
  "brief": "Image->3D (TripoSR) \u2014 concept #bike \u2014 user 'image jaisa' chahta hai",
- "status": "pending",
- "priority": 1
+ "status": "review",
+ "priority": 1,
+ "worker": "artist-actions-cpu",
+ "claimed": 1794499058,
+ "result": "factory/out/img23d-bike.glb",
+ "bytes": 501064,
+ "sha256": "2b0f6ed3c954fdd9"
 }

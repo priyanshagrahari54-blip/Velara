@@ -5,6 +5,11 @@
  "image_key": "cafe-racer",
  "mc_res": 196,
  "brief": "Image->3D (TripoSR) \u2014 concept #superbike-black \u2014 user 'image jaisa' chahta hai",
- "status": "pending",
- "priority": 1
+ "status": "review",
+ "priority": 1,
+ "worker": "artist-actions-cpu",
+ "claimed": 1794499058,
+ "result": "factory/out/img23d-cafe-racer.glb",
+ "bytes": 501068,
+ "sha256": "a40c00d829c86603"
 }
