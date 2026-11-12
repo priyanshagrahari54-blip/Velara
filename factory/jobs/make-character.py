@@ -169,7 +169,7 @@ def build():
         return o
 
     def ball(radius, loc, mat, name, scale=(1, 1, 1)):
-        bpy.ops.mesh.primitive_uv_sphere_add(segments=20, ring_loops=14,
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=20, ring_count=14,
                                              radius=radius, location=loc)
         o = bpy.context.active_object
         o.name = name
@@ -412,7 +412,7 @@ def render_cam(scene, cam_loc, tgt_loc, lens, filepath, samples, exposure, groun
         scene.collection.objects.link(lo)
         ld.energy = en
         ld.color = col
-        ld.rotation_euler = rot
+        lo.rotation_euler = rot   # OBJECT ghumao, light-data nahi!
         helpers.append(lo)
 
     world = bpy.data.worlds.new("RW")

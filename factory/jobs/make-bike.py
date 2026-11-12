@@ -625,7 +625,7 @@ def render_studio():
         scene.collection.objects.link(lo)
         ld.energy = en
         ld.color = col
-        ld.rotation_euler = rot
+        lo.rotation_euler = rot   # OBJECT ghumao, light-data nahi!
         helpers.append(lo)
 
     world = bpy.data.worlds.new("StudioW")

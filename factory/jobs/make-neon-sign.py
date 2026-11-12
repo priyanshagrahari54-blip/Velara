@@ -183,7 +183,6 @@ def render_preview():
 @step("studio_render", required=False)
 def render_studio():
     scene = bpy.context.scene
-    lightF, lightR = globals()["LIGHTF"], globals()["LIGHTR"]
     helpers = []
     L = 2.6
 
@@ -219,7 +218,7 @@ def render_studio():
         scene.collection.objects.link(lo)
         ld.energy = en
         ld.color = col
-        ld.rotation_euler = rot
+        lo.rotation_euler = rot   # OBJECT ghumao, light-data nahi!
         helpers.append(lo)
 
     world = bpy.data.worlds.new("StudioW")
