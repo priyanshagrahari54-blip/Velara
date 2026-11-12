@@ -161,28 +161,36 @@ def decimate():
 
 @step("preview_render", required=False)
 def preview():
+    # BRIGHT lambert render (user feedback: dark previews = "kuch nahi dikhta")
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     from mpl_toolkits.mplot3d.art3d import Poly3DCollection
     mesh = globals()["MESH"]
-    v, f = mesh.vertices, mesh.faces
+    L = np.array([0.45, 0.55, 0.70]); L = L / np.linalg.norm(L)
+    v = np.asarray(mesh.vertices, dtype=np.float32)
+    f = np.asarray(mesh.faces, dtype=np.int64)
+    v = v - v.mean(axis=0)
+    v = v / (np.abs(v).max() + 1e-9)
+    tri = v[f]
+    n = np.cross(tri[:, 1] - tri[:, 0], tri[:, 2] - tri[:, 0])
+    n = n / (np.linalg.norm(n, axis=1, keepdims=True) + 1e-9)
+    shade = 0.38 + 0.62 * np.clip(n @ L, 0, 1)
     try:
-        cols = (mesh.visual.vertex_colors[:, :3] / 255.0)[f].mean(axis=1)
+        cols = np.asarray(mesh.visual.vertex_colors[:, :3], dtype=np.float32) / 255.0
+        fc = np.clip(cols[f].mean(axis=1) ** 0.8, 0, 1) * shade[:, None]
+        fc = np.clip(fc * 1.15 + 0.03, 0, 1)
     except Exception:
-        cols = None
-    fig = plt.figure(figsize=(8, 8), facecolor="#0a0e16")
-    ax = fig.add_subplot(111, projection="3d", facecolor="#0a0e16")
-    pc = Poly3DCollection(v[f], facecolors=np.clip(cols, 0, 1) if cols is not None else "viridis",
-                          edgecolor="none")
-    ax.add_collection3d(pc)
-    ax.set_xlim(v[:, 0].min(), v[:, 0].max())
-    ax.set_ylim(v[:, 1].min(), v[:, 1].max())
-    ax.set_zlim(v[:, 2].min(), v[:, 2].max())
-    ax.set_axis_off()
-    ax.view_init(elev=12, azim=-60)
+        fc = np.clip(shade, 0, 1)[:, None] * np.array([[0.72, 0.75, 0.8]])
+    fc = np.hstack([fc, np.ones((len(f), 1))])
+    fig = plt.figure(figsize=(11, 5.8), facecolor="#e8ecf4", dpi=100)
+    for i, az in enumerate((-55, 125)):
+        ax = fig.add_subplot(1, 2, i + 1, projection="3d", facecolor="#e8ecf4")
+        ax.add_collection3d(Poly3DCollection(tri, facecolors=fc, edgecolor="none"))
+        ax.set_xlim(-1, 1); ax.set_ylim(-1, 1); ax.set_zlim(-1, 1)
+        ax.set_axis_off(); ax.view_init(elev=12, azim=az)
     plt.tight_layout()
-    plt.savefig(PNG, dpi=110)
+    plt.savefig(PNG, facecolor="#e8ecf4", bbox_inches="tight")
     return PNG
 
 
