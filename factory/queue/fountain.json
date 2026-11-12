@@ -1,0 +1,9 @@
+{
+ "id": "fountain",
+ "script": "make-fountain.py",
+ "args": [],
+ "brief": "plaza centerpiece fountain, low-poly water discs",
+ "status": "proposed",
+ "priority": 2,
+ "note": "PLANNER Wave-1 \u2014 user approve kare to 'pending' karo"
+}

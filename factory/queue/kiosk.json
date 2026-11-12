@@ -1,0 +1,9 @@
+{
+ "id": "kiosk",
+ "script": "make-kiosk.py",
+ "args": [],
+ "brief": "neon-lit street food kiosk (Indian bazaar feel)",
+ "status": "proposed",
+ "priority": 2,
+ "note": "PLANNER Wave-1 \u2014 user approve kare to 'pending' karo"
+}

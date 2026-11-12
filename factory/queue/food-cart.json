@@ -1,0 +1,9 @@
+{
+ "id": "food-cart",
+ "script": "make-food-cart.py",
+ "args": [],
+ "brief": "thela-style street food cart with umbrella",
+ "status": "proposed",
+ "priority": 3,
+ "note": "PLANNER Wave-1 \u2014 user approve kare to 'pending' karo"
+}

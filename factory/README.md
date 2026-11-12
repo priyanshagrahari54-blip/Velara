@@ -22,6 +22,12 @@ curl -s -X POST -H "Authorization: Bearer $TOKEN"   "https://api.github.com/repo
 ```
 Cron khud har 6 ghante queue dekhta hai — pending ho to process (24/7 team).
 
+**Approval flow (naya):** job `done` -> DM preview **chat mein** kholta hai -> USER haan/na bolta hai
+-> tabhi `public/assets/` + game mein integrate. `proposed` = planner idea (user approve kare to `pending`).
+
+**3D Artist (image->3D):** `kaggle/` ya `colab/` `VELARA-Artist-Image23D.ipynb` —
+tum image do, TripoSR AI 3D GLB banata hai, review queue mein push hota hai.
+
 **Naya job add karna:** `factory/queue/<id>.json` banao (status:"pending") + script
 `factory/jobs/make-*.py` — commit+push. Bas.
 

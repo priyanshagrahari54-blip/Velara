@@ -1,0 +1,9 @@
+{
+ "id": "billboard",
+ "script": "make-billboard.py",
+ "args": [],
+ "brief": "6m double-sided billboard tower, neon frame, night render",
+ "status": "proposed",
+ "priority": 1,
+ "note": "PLANNER Wave-1 \u2014 user approve kare to 'pending' karo"
+}

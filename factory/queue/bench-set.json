@@ -1,0 +1,9 @@
+{
+ "id": "bench-set",
+ "script": "make-bench-set.py",
+ "args": [],
+ "brief": "park bench + dustbin + planter sidewalk set",
+ "status": "proposed",
+ "priority": 3,
+ "note": "PLANNER Wave-1 \u2014 user approve kare to 'pending' karo"
+}

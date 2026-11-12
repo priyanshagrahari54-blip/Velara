@@ -1,0 +1,9 @@
+{
+ "id": "bus-stop",
+ "script": "make-bus-stop.py",
+ "args": [],
+ "brief": "glass shelter + bench + ad panel, city street prop",
+ "status": "proposed",
+ "priority": 2,
+ "note": "PLANNER Wave-1 \u2014 user approve kare to 'pending' karo"
+}
