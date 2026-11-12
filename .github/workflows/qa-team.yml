@@ -1,0 +1,48 @@
+name: QA Team
+
+# ---------------------------------------------------------------------------
+# VELARA tester team: PURA game auto-test — har 6 ghante + manual dispatch.
+# Smoke (ci.yml) har push par subset chalata hai; YE full 22-step suite hai:
+# movement, combat, vehicles, traffic, peds, tiers+governor+emergency,
+# pause, F3, GLB assets, restart, console-clean.
+# ---------------------------------------------------------------------------
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '41 */6 * * *'   # designer (17) + QA (41) — alag slots
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-team
+  cancel-in-progress: false
+
+jobs:
+  full-suite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Production build
+        run: npm run build
+      - name: Install headless browser
+        run: npx playwright install --with-deps chromium || npx playwright install chromium
+      - name: Boot server + FULL e2e suite (22 steps, 0 errors required)
+        run: |
+          npx vite --port 3000 --host 127.0.0.1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:3000/ >/dev/null && break; sleep 1; done
+          node test/e2e-full.mjs
+      - name: Upload QA report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-report-${{ github.run_id }}
+          path: |
+            test/*.log
+          if-no-files-found: ignore

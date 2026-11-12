@@ -13,6 +13,11 @@ const http = require('http');
 const path = require('path');
 const fs = require('fs');
 
+// G560-class Intel iGPU: Chromium usse blacklist kar deta hai -> SwiftShader (1-2 FPS!).
+// Default ab PEHLE hardware force karta hai; --safe = purana software fallback.
+app.commandLine.appendSwitch('ignore-gpu-blocklist');
+if (process.argv.includes('--angle9')) app.commandLine.appendSwitch('use-angle', 'd3d9'); // purane Win7 drivers
+
 const IS_SAFE_MODE = process.argv.includes('--safe');
 
 if (IS_SAFE_MODE) {

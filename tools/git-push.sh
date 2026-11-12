@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # tools/git-push.sh — sab kuch commit + GitHub pe push (token .ghtoken se padhta hai)
 # Usage: bash tools/git-push.sh "commit message"
+echo "[dev-team guard]"; bash tools/dev-verify.sh || { echo "GUARD FAIL — push rukka"; exit 1; }
 set -e
 cd "$(dirname "$0")/.."
 [ -f .ghtoken ] || { echo "ERROR: .ghtoken file missing"; exit 1; }

@@ -54,7 +54,24 @@ export class VelaraGame {
     this.profile = new URLSearchParams(location.search).get('profile') || 'normal';
 
     // ------------------------------------------------------- engine layer
-    this.renderer = createRenderer(container, { antialias: this.profile !== 'g560' });
+    try {
+      this.renderer = createRenderer(container, { antialias: this.profile !== 'g560' });
+    } catch (e) {
+      document.body.insertAdjacentHTML('beforeend',
+        '<div style="position:fixed;inset:0;background:#0a0e16;color:#e8ecf4;font:15px/1.7 monospace;' +
+        'display:flex;align-items:center;justify-content:center;text-align:center;padding:28px;z-index:9999">' +
+        '<div><h2>WebGL2 nahi mila</h2><p>Is GPU par hardware WebGL2 enable nahi ho paya.<br>' +
+        '<b>Fix:</b> game ko <b>--safe</b> flag ke saath chalao (Safe Mode shortcut),<br>' +
+        'ya graphics driver update karo. Error: ' + String(e.message || e) + '</p></div></div>');
+      throw e;
+    }
+    this._gpuInfo = 'n/a';
+    try {
+      const gl = this.renderer.getContext();
+      const ext = gl.getExtension('WEBGL_debug_renderer_info');
+      const r = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+      this._gpuInfo = r + (/swiftshader|software|llvmpipe|basic render/i.test(r) ? ' [SOFTWARE]' : ' [HW]');
+    } catch (e) { /* F3 info optional */ }
     this.canvas = this.renderer.domElement;
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x05070f);
@@ -519,6 +536,7 @@ export class VelaraGame {
       const ps = this.peds.stats();
       this.ui.updateDebug([
         `FPS ${this.quality.fps.toFixed(0)} | ${this.quality.config.label} | view ${this.quality.config.viewDist || 260}m`,
+        `GPU ${this._gpuInfo} | scale ${(this.quality.config.pixelRatio || 1)}`,
         `draws ${inf.render.calls} | tris ${(inf.render.triangles / 1000).toFixed(0)}k`,
         `geoms ${inf.memory.geometries} | tex ${inf.memory.textures} | heap ${mem}`,
         `chunks ${cs.visible}/${cs.total} | peds ${ps.count} (${ps.walking}w/${ps.panicking}p/${ps.down}d)`,
@@ -692,6 +710,7 @@ export class VelaraGame {
 
     // ------------------------------------------------------------ minimap
     // g560: 8Hz redraw kaafi hai — 60fps ke liye canvas-2D cost kaato
+    if (this.quality.config.minimap === false) return;   // emergency tier: poora band
     this._mmT = (this._mmT || 0) + dt;
     if (this.quality.tier !== 'g560' || this._mmT > 0.125) {
       this._mmT = 0;

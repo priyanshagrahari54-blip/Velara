@@ -1,36 +1,37 @@
 {
-  "name": "VELARA Design Team",
-  "dm": "sandbox (Arena agent) — queue bharta hai, results verify/integrate karta hai",
-  "workers": {
-    "actions-cpu": {
-      "role": "Blender CPU designer — unlimited runs, 24/7 cron (har 6 ghante queue khud process)",
-      "specs": "4-core ubuntu-latest, no GPU",
-      "workflow": "designer.yml",
-      "autonomous": true
-    },
-    "codespace": {
-      "role": "Blender CPU designer — interactive, heavy debug jobs",
-      "specs": "2-core / 8GB / 32GB",
-      "autonomous": false
-    },
-    "colab-gpu": {
-      "role": "Blender GPU designer — heavy bakes (2048px normal, 256 samples)",
-      "specs": "T4 16GB (free tier)",
-      "notebook": "colab/VELARA-Factory-GPU.ipynb",
-      "autonomous": "agar GHTOKEN secret ho to khud push, warna tmate se assistant pull"
-    },
-    "kaggle-gpu": {
-      "role": "Blender GPU designer #2 — queue process karke khud push",
-      "specs": "P100/T4, ~30 GPU-hr/week free",
-      "notebook": "kaggle/VELARA-Designer.ipynb",
-      "autonomous": "GHTOKEN secret chahiye (ek baar setup)"
-    }
+ "name": "VELARA Design Team",
+ "dm": "sandbox (Arena agent) \u2014 queue bharta hai, results verify/integrate karta hai",
+ "workers": {
+  "actions-cpu": {
+   "role": "Blender CPU designer \u2014 unlimited runs, 24/7 cron (har 6 ghante queue khud process)",
+   "specs": "4-core ubuntu-latest, no GPU",
+   "workflow": "designer.yml",
+   "autonomous": true
   },
-  "rules": [
-    "Job spec: factory/queue/<id>.json — {id, script, args, brief, status, priority}",
-    "Status: pending -> running (worker claim) -> done/failed",
-    "Workers sirf factory/out/ mein output daalte hain + queue update ([skip ci] commit)",
-    "DM (sandbox) hi result ko public/assets/ mein move + ASSETS.md + game-integrate karta hai",
-    "Reference-driven design: briefs spec-images ke text-descriptions se bante hain (assistant images nahi dekh sakta)"
-  ]
+  "codespace": {
+   "role": "Blender CPU designer \u2014 interactive, heavy debug jobs",
+   "specs": "2-core / 8GB / 32GB",
+   "autonomous": false
+  },
+  "colab-gpu": {
+   "role": "Blender GPU designer \u2014 heavy bakes (2048px normal, 256 samples)",
+   "specs": "T4 16GB (free tier)",
+   "notebook": "colab/VELARA-Factory-GPU.ipynb",
+   "autonomous": "agar GHTOKEN secret ho to khud push, warna tmate se assistant pull"
+  },
+  "kaggle-gpu": {
+   "role": "Blender GPU designer #2 \u2014 queue process karke khud push",
+   "specs": "P100/T4, ~30 GPU-hr/week free",
+   "notebook": "kaggle/VELARA-Designer.ipynb",
+   "autonomous": "GHTOKEN secret chahiye (ek baar setup)"
+  }
+ },
+ "rules": [
+  "Job flow: pending -> running (claim) -> done -> REVIEW (DM preview chat mein dikhata hai)",
+  "USER APPROVAL zaroori: DM preview kholta hai, user haan/na bolta hai - tabhi public/assets + game mein integrate hota hai",
+  "Workers sirf factory/out/ + queue JSONs commit karte hain [skip ci] ke saath",
+  "DM (assistant): queue bharna, results verify, preview chat mein, approval ke baad integrate + ASSETS.md",
+  "proposed status = planner ka idea, user approve kare to pending hota hai (worker nahi uthata)",
+  "Stale claim reclaim: running >1800s (Actions) / >3600s (notebook)"
+ ]
 }

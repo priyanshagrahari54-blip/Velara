@@ -96,7 +96,7 @@ const CSS = `
     transition: opacity 0.15s ease; }
 
   /* ---------- pause ---------- */
-  #v-debug { position: absolute; top: 8px; left: 10px; font: 10px/1.55 monospace;
+  #v-debug { position: absolute; top: 8px; left: 10px; display: none; font: 10px/1.55 monospace;
     color: #9fe8b0; background: rgba(4,10,8,0.74); padding: 6px 10px; border-radius: 6px;
     white-space: pre; display: none; pointer-events: none; z-index: 40; }
   #v-pause { position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
@@ -199,6 +199,7 @@ export class UI {
       </div>
 
       <div id="v-hud">
+        <div id="v-debug"></div>
         <div id="v-brand">VELARA<small>CITY OF SHADOWS</small></div>
         <div id="v-clock">23:40 · RAAT</div>
         <div id="v-mission" class="v-panel">
@@ -412,6 +413,7 @@ export class UI {
 
   // ------------------------------------------------------------- debug overlay (F3)
   toggleDebug() {
+    if (!this.debugEl) return;
     this.debugEl.style.display = this.debugEl.style.display === 'block' ? 'none' : 'block';
   }
 
