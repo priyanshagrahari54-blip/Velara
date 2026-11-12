@@ -1,0 +1,12 @@
+{
+ "id": "engine-idle",
+ "script": "make-sound.py",
+ "args": [
+  "engine-idle"
+ ],
+ "brief": "SFX engine-idle (numpy synth, CC0)",
+ "status": "done",
+ "priority": 2,
+ "worker": "soundteam-local",
+ "result": "factory/out/engine-idle.wav"
+}

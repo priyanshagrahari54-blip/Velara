@@ -1,0 +1,10 @@
+{
+ "id": "police",
+ "script": "make-car.py",
+ "args": [
+  "police"
+ ],
+ "brief": "User-chosen concept (gallery) \u2014 police",
+ "status": "pending",
+ "priority": 1
+}

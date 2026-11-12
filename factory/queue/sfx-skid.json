@@ -1,0 +1,12 @@
+{
+ "id": "skid",
+ "script": "make-sound.py",
+ "args": [
+  "skid"
+ ],
+ "brief": "SFX skid (numpy synth, CC0)",
+ "status": "done",
+ "priority": 2,
+ "worker": "soundteam-local",
+ "result": "factory/out/skid.wav"
+}

@@ -1,0 +1,12 @@
+{
+ "id": "siren",
+ "script": "make-sound.py",
+ "args": [
+  "siren"
+ ],
+ "brief": "SFX siren (numpy synth, CC0)",
+ "status": "done",
+ "priority": 2,
+ "worker": "soundteam-local",
+ "result": "factory/out/siren.wav"
+}

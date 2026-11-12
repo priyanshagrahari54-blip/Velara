@@ -1,0 +1,10 @@
+{
+ "id": "city-bus",
+ "script": "make-car.py",
+ "args": [
+  "city-bus"
+ ],
+ "brief": "User-chosen concept (gallery) \u2014 city-bus",
+ "status": "pending",
+ "priority": 1
+}

@@ -1,0 +1,10 @@
+{
+ "id": "velara-bike",
+ "script": "make-bike.py",
+ "args": [
+  "velara-bike"
+ ],
+ "brief": "User-chosen concept (gallery) \u2014 velara-bike",
+ "status": "pending",
+ "priority": 1
+}

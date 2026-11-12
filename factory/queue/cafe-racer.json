@@ -1,0 +1,10 @@
+{
+ "id": "cafe-racer",
+ "script": "make-bike.py",
+ "args": [
+  "cafe-racer"
+ ],
+ "brief": "User-chosen concept (gallery) \u2014 cafe-racer",
+ "status": "pending",
+ "priority": 1
+}

@@ -1,0 +1,12 @@
+{
+ "id": "horn",
+ "script": "make-sound.py",
+ "args": [
+  "horn"
+ ],
+ "brief": "SFX horn (numpy synth, CC0)",
+ "status": "done",
+ "priority": 2,
+ "worker": "soundteam-local",
+ "result": "factory/out/horn.wav"
+}

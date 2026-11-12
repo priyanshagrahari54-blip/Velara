@@ -1,0 +1,12 @@
+{
+ "id": "rain-loop",
+ "script": "make-sound.py",
+ "args": [
+  "rain-loop"
+ ],
+ "brief": "SFX rain-loop (numpy synth, CC0)",
+ "status": "done",
+ "priority": 2,
+ "worker": "soundteam-local",
+ "result": "factory/out/rain-loop.wav"
+}

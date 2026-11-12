@@ -1,0 +1,12 @@
+{
+ "id": "pickup",
+ "script": "make-sound.py",
+ "args": [
+  "pickup"
+ ],
+ "brief": "SFX pickup (numpy synth, CC0)",
+ "status": "done",
+ "priority": 2,
+ "worker": "soundteam-local",
+ "result": "factory/out/pickup.wav"
+}

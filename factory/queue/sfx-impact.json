@@ -1,0 +1,12 @@
+{
+ "id": "impact",
+ "script": "make-sound.py",
+ "args": [
+  "impact"
+ ],
+ "brief": "SFX impact (numpy synth, CC0)",
+ "status": "done",
+ "priority": 2,
+ "worker": "soundteam-local",
+ "result": "factory/out/impact.wav"
+}

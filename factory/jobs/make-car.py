@@ -43,6 +43,14 @@ PRESETS = {
     "colossus-v":  dict(L=5.05, W=2.02, H=1.86, wheelR=0.42, wheelbase=3.0,
                         cabinH=0.78, cabinLen=2.1, clearance=0.30,
                         paint=(0.10, 0.19, 0.15), spoiler=False, style="suv", rails=True),
+    "police":      dict(L=4.90, W=1.92, H=1.50, wheelR=0.34, wheelbase=2.95,
+                        cabinH=0.62, cabinLen=1.95, clearance=0.16,
+                        paint=(0.90, 0.90, 0.92), spoiler=False, style="muscle",
+                        lightbar=True, police=True),
+    "city-bus":    dict(L=10.2, W=2.50, H=3.00, wheelR=0.52, wheelbase=5.6,
+                        cabinH=1.05, cabinLen=7.2, clearance=0.28,
+                        paint=(0.16, 0.34, 0.55), spoiler=False, style="bus",
+                        bus=True),
 }
 
 # CLI: preset + overrides (bake/ao/rough/samples/rx/ry)
@@ -250,6 +258,15 @@ def build():
         for sx in (-1, 1):
             trim_parts.append(box(0.045, 0.14, 0.15,
                                   (sx * W * 0.26, -L * 0.44, cl + bodyH + 0.07), trim, "SpoilerStand"))
+    if P.get("lightbar"):
+        bar_y = -L * 0.02
+        bar_z = cl + bodyH + P["cabinH"] + 0.035
+        lf_parts.append(box(W * 0.30, 0.16, 0.09,
+                            (0, bar_y, bar_z), mk_light("BarBlue", (0.05, 0.15, 1.0, 1.0), 6.0), "BarBlue"))
+        lf_parts.append(box(W * 0.30, 0.16, 0.09,
+                            (0, bar_y + 0.18, bar_z), mk_light("BarRed", (1.0, 0.05, 0.05, 1.0), 6.0), "BarRed"))
+        trim_parts.append(box(W * 0.34, 0.42, 0.03,
+                              (0, bar_y + 0.09, bar_z - 0.05), trim, "BarBase"))
     if P.get("rails"):
         for sx in (-1, 1):
             trim_parts.append(box(0.05, P["cabinLen"] * 0.5, 0.05,
