@@ -1,10 +1,11 @@
 """
-VELARA Sound Team — Job: make-sound
-===================================
-numpy se game-ready WAV SFX (CC0 self-made). Blender ya plain python3 — dono chalta hai.
-    python3 factory/jobs/make-sound.py <preset> [| more presets]
+VELARA Sound Team — Job: make-sound (v2 — layered synthesis)
+============================================================
+v1 "0 rating" tha. v2: biquad filters + Schroeder reverb + tanh saturation
++ stereo Haas + multi-layer design. numpy only, plain python3 ya blender dono.
+    python3 factory/jobs/make-sound.py [preset ...]
 Presets: siren horn gunshot pickup impact engine-idle rain-loop skid
-Output: factory/out/<preset>.wav  (16-bit PCM mono)
+Output: factory/out/<preset>.wav  (16-bit PCM STEREO)
 """
 import json
 import os
@@ -21,165 +22,263 @@ SR_HI = 44100
 SR_LO = 22050
 
 
-def n_t(sr, sec):
-    return int(sr * sec)
-
-
-def lowpass(x, cutoff, sr):
-    a = 1.0 - np.exp(-2.0 * np.pi * cutoff / sr)
+# ------------------------------------------------------------ DSP core
+def biquad(x, b0, b1, b2, a1, a2):
     y = np.empty_like(x)
-    acc = 0.0
+    x1 = x2 = y1 = y2 = 0.0
     for i in range(len(x)):
-        acc += a * (x[i] - acc)
-        y[i] = acc
+        xn = x[i]
+        yn = b0 * xn + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2
+        x2, x1 = x1, xn
+        y2, y1 = y1, yn
+        y[i] = yn
     return y
 
 
-def highpass(x, cutoff, sr):
-    return x - lowpass(x, cutoff, sr)
+def lp(x, fc, sr, q=0.707):
+    w = 2 * np.pi * fc / sr
+    al = np.sin(w) / (2 * q)
+    c, s = np.cos(w), np.sin(w)
+    b0 = (1 - c) / 2; b1 = 1 - c; b2 = b0
+    a0 = 1 + al; a1 = -2 * c; a2 = 1 - al
+    return biquad(x, b0 / a0, b1 / a0, b2 / a0, a1 / a0, a2 / a0)
 
 
-def env_ad(n, attack, decay, sr):
-    e = np.ones(n, dtype=np.float32)
-    na = max(1, int(attack * sr))
-    nd = max(1, int(decay * sr))
-    e[:na] = np.linspace(0, 1, na)
-    if nd < n:
-        e[-nd:] *= np.linspace(1, 0, nd)
+def hp(x, fc, sr, q=0.707):
+    w = 2 * np.pi * fc / sr
+    al = np.sin(w) / (2 * q)
+    c = np.cos(w)
+    b0 = (1 + c) / 2; b1 = -(1 + c); b2 = b0
+    a0 = 1 + al; a1 = -2 * c; a2 = 1 - al
+    return biquad(x, b0 / a0, b1 / a0, b2 / a0, a1 / a0, a2 / a0)
+
+
+def bp(x, fc, sr, q=2.0):
+    w = 2 * np.pi * fc / sr
+    al = np.sin(w) / (2 * q)
+    c = np.cos(w)
+    b0 = al; b1 = 0; b2 = -al
+    a0 = 1 + al; a1 = -2 * c; a2 = 1 - al
+    return biquad(x, b0 / a0, b1 / a0, b2 / a0, a1 / a0, a2 / a0)
+
+
+def sat(x, drive=2.0):
+    return np.tanh(x * drive) / np.tanh(drive)
+
+
+def reverb(x, sr, mix=0.22, decay=0.75):
+    """Schroeder-lite: 3 comb + 1 allpass."""
+    out = x.copy()
+    for d_ms in (29.7, 37.1, 41.1):
+        d = int(sr * d_ms / 1000)
+        buf = np.zeros(len(x) + d * 8)
+        buf[:len(x)] += x * 0.33
+        for i in range(d, len(buf)):
+            buf[i] += decay * buf[i - d]
+        out = out + buf[:len(x)] * 0.33
+    a = int(sr * 0.005)
+    ap = np.zeros(len(out))
+    g = 0.7
+    for i in range(len(ap)):
+        xn = out[i] if i < len(out) else 0.0
+        xd = ap[i - a] if i >= a else 0.0
+        ap[i] = -g * xn + xd + g * ap[i - a] if i >= a else xn
+    return x * (1 - mix) + ap * mix
+
+
+def stereoize(x, sr, haas_ms=0.35, pan=0.06):
+    """Haas + halka pan — headphone par bhi depth."""
+    d = int(sr * haas_ms / 1000)
+    L = x.copy()
+    Rr = np.concatenate([np.zeros(d), x[:-d]]) if d else x.copy()
+    return np.stack([(1 - pan) * L, (1 + pan) * Rr], axis=1)
+
+
+def loopify(x, sr, xf_sec=0.05):
+    n = len(x)
+    w = min(n // 2, int(xf_sec * sr))
+    ramp = np.linspace(0, 1, w, dtype=np.float32)
+    head = x[:w].copy()
+    x[:w] = head * ramp + x[-w:] * (1 - ramp)
+    return x[:n - w] if n > w * 2 else x
+
+
+def adsr(n, sr, a=0.005, d=0.1, s_level=0.7, r=0.2, hold=None):
+    e = np.full(n, s_level, dtype=np.float32)
+    na, nd = int(a * sr), int(d * sr)
+    nr = int(r * sr)
+    if hold is None:
+        hold = max(0, n - na - nd - nr)
+    ns = hold
+    i = 0
+    e[i:i + na] = np.linspace(0, 1, min(na, n)); i += na
+    e[i:i + nd] = np.linspace(1, s_level, min(nd, max(0, n - i))); i += nd
+    i = max(i, ns)
+    if nr and i < n:
+        e[i:] = np.linspace(e[i - 1] if i else s_level, 0, n - i)
     return e
 
 
-def sweep(freq_from, freq_to, n, sr):
+def sweep_phase(f_from, f_to, n, sr):
     t = np.arange(n) / sr
-    f = freq_from + (freq_to - freq_from) * (t / t[-1])
-    phase = 2 * np.pi * np.cumsum(f) / sr
-    return phase
+    f = f_from + (f_to - f_from) * (t / (t[-1] + 1e-9))
+    return 2 * np.pi * np.cumsum(f) / sr
 
 
-def sine(phase):
-    return np.sin(phase)
+def saw(ph):
+    return ((ph / (2 * np.pi)) % 1.0) * 2.0 - 1.0
 
 
-def saw(phase):
-    return ((phase / (2 * np.pi)) % 1.0) * 2.0 - 1.0
+def sq(ph):
+    return np.sign(np.sin(ph)) * 0.9
 
 
-def saw_harm(phase, k=3):
-    s = saw(phase).astype(np.float32)
-    for i in range(2, k + 1):
-        s += saw(phase * i).astype(np.float32) / i
-    return s / 2.2
+def noise(n, seed):
+    return np.random.default_rng(seed).standard_normal(n).astype(np.float32)
 
 
-# ---------------------------------------------------------------- presets
+# ------------------------------------------------------------ presets
 def p_siren():
-    """Indian police wail: 520->1150->520 sweep x2, harmonic bhari."""
-    sr, sec = SR_HI, 2.4
-    n = n_t(sr, sec)
-    ph = sweep(520, 1150, n // 2, sr)
-    ph2 = sweep(1150, 520, n - n // 2, sr)
-    phase = np.concatenate([ph, ph2])
-    x = saw_harm(phase, 3)
-    x = lowpass(x, 3800, sr) * 0.8
-    return x * env_ad(n, 0.05, 0.25, sr), sr
+    sr = SR_HI
+    sec = 2.6
+    n = int(sr * sec)
+    ph = sweep_phase(560, 1180, n // 2, sr)
+    ph = np.concatenate([ph, sweep_phase(1180, 560, n - n // 2, sr)])
+    vib = 2 * np.pi * np.arange(n) / sr * 6.0          # 6Hz FM wobble
+    ph = ph + 14.0 * np.sin(vib)
+    x = saw(ph) * 0.6 + sq(ph) * 0.4
+    x = sat(x, 1.6)
+    x = bp(x, 700, sr, 0.9)
+    x = lp(x, 3600, sr, 0.8)
+    x *= adsr(n, sr, 0.04, 0.1, 0.95, 0.3)
+    x = reverb(x, sr, 0.16, 0.7)
+    return stereoize(x, sr), sr
 
 
 def p_horn():
-    """Dual-tone 400+505Hz, thoda square feel."""
-    sr, sec = SR_HI, 0.8
-    n = n_t(sr, sec)
+    sr = SR_HI
+    sec = 0.9
+    n = int(sr * sec)
     t = np.arange(n) / sr
-    x = np.sign(np.sin(2 * np.pi * 400 * t)) * 0.5 + np.sign(np.sin(2 * np.pi * 505 * t)) * 0.5
-    x = lowpass(x.astype(np.float32), 2400, sr)
-    return x * env_ad(n, 0.015, 0.18, sr), sr
+    vib = 1 + 0.004 * np.sin(2 * np.pi * 5.5 * t)
+    x = (sq(2 * np.pi * 400 * t * vib) * 0.5
+         + sq(2 * np.pi * 505 * t * vib) * 0.45
+         + saw(2 * np.pi * 800 * t) * 0.12
+         + saw(2 * np.pi * 1010 * t) * 0.1)
+    x = sat(x, 2.4)
+    x = lp(x, 2900, sr, 0.9)
+    x = bp(x, 450, sr, 0.5) * 0.3 + x          # cabin resonance
+    x *= adsr(n, sr, 0.012, 0.06, 0.9, 0.22)
+    x = reverb(x, sr, 0.1, 0.65)
+    return stereoize(x, sr, haas_ms=0.2), sr
 
 
 def p_gunshot():
-    """Noise burst + 150Hz thump + click."""
-    sr, sec = SR_HI, 0.4
-    n = n_t(sr, sec)
-    rng = np.random.default_rng(7)
-    noise = rng.standard_normal(n).astype(np.float32)
+    sr = SR_HI
+    sec = 0.6
+    n = int(sr * sec)
     t = np.arange(n) / sr
-    burst = lowpass(noise, 3000, sr) * np.exp(-t / 0.055)
-    thump = sine(2 * np.pi * 150 * t + 0.0).astype(np.float32) * np.exp(-t / 0.09) * 0.8
-    click = np.zeros(n, dtype=np.float32)
-    click[:40] = np.linspace(1, 0, 40)
-    x = burst * 1.1 + thump + click * 0.6
-    return x * 0.85, sr
+    # L1: click transient
+    c = np.zeros(n, dtype=np.float32); c[:30] = np.linspace(1, 0, 30)
+    c = hp(c, 2200, sr)
+    # L2: crack
+    crack = bp(noise(n, 7), 1900, sr, 0.9) * np.exp(-t / 0.02)
+    # L3: body boom
+    body = lp(noise(n, 11), 420, sr) * np.exp(-t / 0.13)
+    thump = np.sin(2 * np.pi * 118 * t).astype(np.float32) * np.exp(-t / 0.09) * 0.9
+    # L4: mech re-rack (90ms baad chhota click)
+    mech = np.zeros(n, dtype=np.float32)
+    m0 = int(0.09 * sr)
+    mech[m0:m0 + 25] = np.linspace(0.5, 0, 25)
+    mech = bp(mech, 3000, sr, 2.0)
+    x = sat(c * 0.8 + crack * 1.2 + body * 1.0 + thump + mech * 0.5, 1.8)
+    x = reverb(x, sr, 0.3, 0.68)
+    x *= 0.9
+    return stereoize(x, sr, haas_ms=0.6), sr
 
 
 def p_pickup():
-    """Teeno-note chime: 880/1174/1568."""
-    sr, sec = SR_HI, 0.55
-    n = n_t(sr, sec)
+    sr = SR_HI
+    sec = 0.7
+    n = int(sr * sec)
+    t = np.arange(n) / sr
     x = np.zeros(n, dtype=np.float32)
-    for k, f in enumerate((880, 1174.66, 1567.98)):
-        s = int(k * 0.09 * sr)
-        e = min(n, s + n_t(sr, 0.35))
-        t = np.arange(e - s) / sr
-        x[s:e] += (sine(2 * np.pi * f * t).astype(np.float32) * 0.8
-                   + sine(2 * np.pi * f * 2 * t).astype(np.float32) * 0.25
-                   ) * np.exp(-t / 0.13) * 0.7
-    return x, sr
+    for k, (fc, dec, amp) in enumerate(((1174.66, 0.30, 0.8), (1567.98, 0.22, 0.55),
+                                        (3248, 0.14, 0.3))):
+        s = int(k * 0.05 * sr)
+        tt = t[:n - s]
+        mod = np.sin(2 * np.pi * fc * tt) * (1 + 0.6 * np.sin(2 * np.pi * fc * 2.76 * tt))
+        x[s:] += (mod.astype(np.float32) * np.exp(-tt / dec) * amp)
+    x += hp(noise(n, 21), 4200, sr) * np.exp(-t / 0.05) * 0.15   # sparkle
+    x = reverb(x, sr, 0.24, 0.72)
+    return stereoize(x, sr), sr
 
 
 def p_impact():
-    """Crash: harsh noise + 80Hz dhuan."""
-    sr, sec = SR_HI, 0.55
-    n = n_t(sr, sec)
-    rng = np.random.default_rng(11)
+    sr = SR_HI
+    sec = 0.8
+    n = int(sr * sec)
     t = np.arange(n) / sr
-    noise = lowpass(rng.standard_normal(n).astype(np.float32), 1800, sr)
-    thump = sine(2 * np.pi * 80 * t).astype(np.float32)
-    x = noise * np.exp(-t / 0.14) + thump * np.exp(-t / 0.22) * 0.9
-    return x * 0.9, sr
+    x = np.zeros(n, dtype=np.float32)
+    for off, amp, tau in ((0.0, 1.0, 0.10), (0.045, 0.6, 0.08), (0.105, 0.4, 0.06)):
+        s = int(off * sr)
+        tt = t[:n - s]
+        x[s:] += lp(noise(n - s, int(off * 100) + 3), 950, sr) * np.exp(-tt / tau) * amp
+    x += np.sin(2 * np.pi * 72 * t).astype(np.float32) * np.exp(-t / 0.3) * 0.9
+    x += bp(noise(n, 31), 3300, sr, 8) * np.exp(-t / 0.09) * 0.22   # metal ring
+    x = sat(x, 1.7)
+    x = reverb(x, sr, 0.26, 0.7)
+    return stereoize(x, sr, haas_ms=0.8), sr
 
 
 def p_engine_idle():
-    """45Hz saw + 90Hz + 8Hz firing AM + halka noise. Seamless loop."""
-    sr, sec = SR_LO, 2.4
-    n = n_t(sr, sec)
+    sr = SR_LO
+    sec = 2.4
+    n = int(sr * sec)
     t = np.arange(n) / sr
-    cycles = 45 * sec
-    ph = 2 * np.pi * t * 45
-    ph = np.linspace(0, 2 * np.pi * round(cycles), n)  # exact loop phase
-    x = saw_harm(ph, 4) * 0.6
-    x += sine(2 * np.pi * 90 * t + ph * 0).astype(np.float32) * 0.3
-    x *= (0.75 + 0.25 * sine(2 * np.pi * 8 * t).astype(np.float32))   # firing throb
-    rng = np.random.default_rng(3)
-    x += lowpass(rng.standard_normal(n).astype(np.float32), 500, sr) * 0.22
-    xf = 0.04 * sr
-    w = np.ones(n, dtype=np.float32)
-    w[:int(xf)] = np.linspace(0, 1, int(xf))
-    x = x * w + np.roll(x, 1) * (1 - w)   # crossfade loop seam
-    return x * 0.55, sr
+    ph = np.linspace(0, 2 * np.pi * round(46 * sec), n)   # loop-exact
+    x = (saw(ph) * 0.5 + saw(ph * 2) * 0.28 + saw(ph * 3) * 0.14 + saw(ph * 4) * 0.08)
+    fire = 0.7 + 0.3 * np.sin(2 * np.pi * 9.2 * t).astype(np.float32)
+    jit = 1 + 0.05 * np.sin(2 * np.pi * 2.7 * t + 1.3)
+    x *= fire * jit
+    burble = lp(noise(n, 3), 420, sr) * (0.5 + 0.5 * np.sin(2 * np.pi * 4.6 * t + 0.7))
+    x = sat(x * 0.8 + burble * 0.35, 1.5)
+    x = lp(x, 900, sr)
+    x = loopify(x, sr, 0.06)
+    return stereoize(x, sr, haas_ms=0.4), sr
 
 
 def p_rain():
-    """Pink-ish noise, seamless loop."""
-    sr, sec = SR_LO, 4.0
-    n = n_t(sr, sec)
-    rng = np.random.default_rng(5)
-    x = lowpass(rng.standard_normal(n).astype(np.float32), 1500, sr)
-    x = lowpass(x, 1500, sr) * 1.4
-    xf = 0.12 * sr
-    w = np.ones(n, dtype=np.float32)
-    w[:int(xf)] = np.linspace(0, 1, int(xf))
-    x = x * w + np.roll(x, 1) * (1 - w)
-    return x * 0.5, sr
+    sr = SR_LO
+    sec = 4.0
+    n = int(sr * sec)
+    x = lp(noise(n, 5), 1100, sr) * 0.8 + bp(noise(n, 55), 2800, sr, 1.2) * 0.25
+    rng = np.random.default_rng(77)
+    for _ in range(46):                      # droplets — leaf/e-shed patter
+        p0 = rng.integers(0, n - 600)
+        f = rng.uniform(900, 3800)
+        d = rng.integers(90, 380)
+        tt = np.arange(d) / sr
+        x[p0:p0 + d] += np.sin(2 * np.pi * f * tt).astype(np.float32) * np.exp(-tt / 0.006) * 0.3
+    x = lp(x, 3400, sr)
+    x = loopify(x, sr, 0.12)
+    return stereoize(x, sr, haas_ms=1.2), sr
 
 
 def p_skid():
-    """Tyre squeal: ~1.8kHz band noise + 28Hz AM."""
-    sr, sec = SR_HI, 1.2
-    n = n_t(sr, sec)
-    rng = np.random.default_rng(9)
-    noise = rng.standard_normal(n).astype(np.float32)
-    x = highpass(lowpass(noise, 2600, sr), 1100, sr)
+    sr = SR_HI
+    sec = 1.3
+    n = int(sr * sec)
     t = np.arange(n) / sr
-    x *= (0.6 + 0.4 * sine(2 * np.pi * 28 * t).astype(np.float32))
-    return x * env_ad(n, 0.03, 0.3, sr) * 0.8, sr
+    wob = 2 * np.pi * np.arange(n) / sr * 7.0
+    x = bp(noise(n, 9), 1750, sr, 7.0) + 0.3 * bp(noise(n, 9), 2130, sr, 7.0)
+    x = x * (0.55 + 0.45 * np.sin(2 * np.pi * 23 * t).astype(np.float32)
+             * np.sin(wob) * 0.3 + 0.7)
+    x = sat(x, 1.9)
+    x = hp(x, 900, sr)
+    x *= adsr(n, sr, 0.02, 0.08, 0.85, 0.35)
+    x = reverb(x, sr, 0.08, 0.6)
+    return stereoize(x, sr, haas_ms=0.25), sr
 
 
 PRESETS = {
@@ -195,10 +294,12 @@ PRESETS = {
 
 
 def write_wav(path, x, sr):
+    if x.ndim == 1:
+        x = np.stack([x, x], axis=1)
     x = np.clip(x, -1.0, 1.0)
     pcm = (x * 32767).astype('<i2').tobytes()
     with wave.open(path, "wb") as w:
-        w.setnchannels(1)
+        w.setnchannels(2)
         w.setsampwidth(2)
         w.setframerate(sr)
         w.writeframes(pcm)
@@ -208,16 +309,17 @@ def write_wav(path, x, sr):
 if __name__ == "__main__":
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
     picked = [a for a in args if a in PRESETS] or list(PRESETS)
-    R = {"job": "sound", "steps": []}
+    R = {"job": "sound-v2", "steps": []}
     for name in picked:
         try:
-            x, sr = PRESETS[name]()
+            xs, sr = PRESETS[name]()
             path = os.path.join(OUT, f"{name}.wav")
-            sz = write_wav(path, x, sr)
-            dur = len(x) / sr
-            R["steps"].append({"step": name, "ok": True, "detail": f"{sz}B {dur:.2f}s @{sr}Hz"})
-            print(f"[OK] {name} -> {sz} bytes ({dur:.2f}s @ {sr}Hz)", flush=True)
+            sz = write_wav(path, xs, sr)
+            R["steps"].append({"step": name, "ok": True, "detail": f"{sz}B stereo @{sr}Hz"})
+            print(f"[OK] {name} -> {sz} bytes (stereo @{sr}Hz)", flush=True)
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             R["steps"].append({"step": name, "ok": False, "error": str(e)})
             print(f"[FAIL] {name} — {e}", flush=True)
     print("JOB_RESULT " + json.dumps(R), flush=True)

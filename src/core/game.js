@@ -183,6 +183,7 @@ export class VelaraGame {
   // ============================================================ quality
   _setupQuality() {
     this.quality.onChange = (cfg) => {
+      if (this.env && this.env.setPerf) this.env.setPerf(cfg.far || 2200);
       this.renderer.setPixelRatio(cfg.pixelRatio);
       const sun = this.env.sun;
       sun.castShadow = cfg.shadows;

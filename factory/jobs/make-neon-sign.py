@@ -19,6 +19,7 @@ OUT = os.path.normpath(os.path.join(HERE, "..", "out"))
 os.makedirs(OUT, exist_ok=True)
 GLB = os.path.join(OUT, "neon-sign.glb")
 PNG = os.path.join(OUT, "neon-sign_preview.png")
+STUDIO_PNG = os.path.join(OUT, "neon-sign_studio.png")
 
 NEON = (1.0, 0.15, 0.45, 1.0)     # hot pink
 EXPORT_STRENGTH = 8.0
@@ -175,6 +176,76 @@ def render_preview():
     return PNG
 
 
+
+
+# ---------------------------------------------------------------- 3b. STUDIO render
+# (user feedback: night previews andhere mein the — ab bright 3-light studio bhi)
+@step("studio_render", required=False)
+def render_studio():
+    scene = bpy.context.scene
+    lightF, lightR = globals()["LIGHTF"], globals()["LIGHTR"]
+    helpers = []
+    L = 2.6
+
+    bpy.ops.mesh.primitive_plane_add(size=10, location=(0, 0, -0.01))
+    ground = bpy.context.active_object
+    gm = bpy.data.materials.new("StudioFloor")
+    gm.use_nodes = True
+    gb = gm.node_tree.nodes["Principled BSDF"]
+    set_input(gb, ["Base Color"], (0.35, 0.36, 0.40, 1.0))
+    set_input(gb, ["Roughness"], 0.45)
+    ground.data.materials.append(gm)
+    helpers.append(ground)
+
+    cam_data = bpy.data.cameras.new("CamS")
+    cam = bpy.data.objects.new("CamS", cam_data)
+    scene.collection.objects.link(cam)
+    cam.location = (3.0, -4.6, 2.3)
+    cam_data.lens = 38
+    tgt = bpy.data.objects.new("TgtS", None)
+    scene.collection.objects.link(tgt)
+    tgt.location = (0, 0, 1.8)
+    con = cam.constraints.new("TRACK_TO")
+    con.target = tgt
+    scene.camera = cam
+    helpers += [cam, tgt]
+
+    # 3-point studio: key (warm) + fill (cool) + rim
+    for nm, col, en, rot in (("Key", (1.0, 0.96, 0.9), 3.2, (0.9, 0.4, 0.8)),
+                             ("Fill", (0.85, 0.92, 1.0), 1.3, (0.9, -0.7, 0.5)),
+                             ("Rim", (1.0, 1.0, 1.0), 2.6, (1.3, 2.6, -0.4))):
+        ld = bpy.data.lights.new(nm, "SUN")
+        lo = bpy.data.objects.new(nm, ld)
+        scene.collection.objects.link(lo)
+        ld.energy = en
+        ld.color = col
+        ld.rotation_euler = rot
+        helpers.append(lo)
+
+    world = bpy.data.worlds.new("StudioW")
+    world.use_nodes = True
+    wbg = next(n for n in world.node_tree.nodes if n.type == "BACKGROUND")
+    set_input(wbg, ["Color"], (0.38, 0.40, 0.44, 1.0))
+    scene.world = world
+
+    dev = setup_cycles(samples=max(48, A["samples"] // 2))
+    try:
+        scene.view_settings.exposure = 1.25
+    except Exception:
+        pass
+    scene.render.resolution_x = A["rx"]
+    scene.render.resolution_y = A["ry"]
+    scene.render.filepath = STUDIO_PNG
+    scene.render.image_settings.file_format = "PNG"
+    bpy.ops.render.render(write_still=True)
+
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in helpers:
+        o.select_set(True)
+    bpy.ops.object.delete()
+    return STUDIO_PNG
+
+
 @step("glb_export")
 def export_glb():
     parts = globals()["PARTS"]
@@ -196,6 +267,7 @@ def export_glb():
 
 build()
 render_preview()
+render_studio()
 export_glb()
 R["glb_bytes"] = os.path.getsize(GLB)
 R["glb"] = GLB

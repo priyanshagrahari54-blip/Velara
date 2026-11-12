@@ -258,7 +258,7 @@ export function buildCity(scene, world, opts = {}) {
     const map = mkTex(mapC);
     const emissive = mkTex(emiC);
     const mat = new THREE.MeshStandardMaterial({
-      map, emissiveMap: emissive, emissive: 0xffffff, emissiveIntensity: 0.75,
+      map, emissiveMap: emissive, emissive: 0xffffff, emissiveIntensity: 0.95,
       roughness: 0.82, metalness: 0.12,
     });
     facades.push(mat);
@@ -300,7 +300,7 @@ export function buildCity(scene, world, opts = {}) {
     };
     podiumMats.push(new THREE.MeshStandardMaterial({
       map: mkTex(mapC), emissiveMap: mkTex(emiC), emissive: 0xffffff,
-      emissiveIntensity: 0.75, roughness: 0.78, metalness: 0.1,
+      emissiveIntensity: 0.95, roughness: 0.78, metalness: 0.1,
     }));
   }
 

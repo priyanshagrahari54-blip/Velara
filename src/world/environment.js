@@ -6,12 +6,12 @@ import * as THREE from 'three';
 
 const PRESETS = {
   night: {
-    skyTop: 0x05070f, skyBottom: 0x0e1830,
-    fogColor: 0x0a111e, fogDensity: 0.0040,
-    sunColor: 0xbdd4ff, sunIntensity: 2.1, sunPos: [140, 240, 90],
-    hemiSky: 0x2a3c5a, hemiGround: 0x0e1016, hemiIntensity: 0.72,
-    stars: 0.95, lampIntensity: 44, windowGlow: 1.35, exposure: 1.26,
-    moonVisible: true, envStrip: 0x1b2b4a,
+    skyTop: 0x070b1a, skyBottom: 0x1a2c52,   // bright horizon — "sky nahi dikhta" fix
+    fogColor: 0x101a2e, fogDensity: 0.0034,
+    sunColor: 0xbdd4ff, sunIntensity: 2.4, sunPos: [140, 240, 90],
+    hemiSky: 0x33486b, hemiGround: 0x14161d, hemiIntensity: 0.95,
+    stars: 1.0, lampIntensity: 55, windowGlow: 1.7, exposure: 1.32,
+    moonVisible: true, envStrip: 0x24385e,
   },
   dusk: { // GOLDEN HOUR — user-approved art direction (Style B, GTA5 sunset)
     // deep pass: sun更低 => lambi chhayaayein; amber haze; warm bounce
@@ -96,6 +96,16 @@ export function createEnvironment(scene, renderer) {
   const moon = new THREE.Mesh(new THREE.SphereGeometry(26, 24, 16), moonMat);
   moon.position.set(280, 420, 180);
   scene.add(moon);
+
+  // far-plane ke andar sky — warna low/g560 tiers (far 350-900) pe dome 950m clip ho
+  // jata tha aur "sky hi nahi dikhta" lagta tha (user report fix)
+  const MOON_BASE = moon.position.clone();
+  function setPerf(far = 2200) {
+    const f = Math.min(1, (far * 0.42) / 950);
+    sky.scale.setScalar(f);
+    stars.scale.setScalar(f);
+    moon.position.copy(MOON_BASE).multiplyScalar(f);
+  }
 
   // ---------------- lights ----------------
   const sun = new THREE.DirectionalLight(PRESETS.night.sunColor, PRESETS.night.sunIntensity);
@@ -319,7 +329,7 @@ export function createEnvironment(scene, renderer) {
   applyMixture(1);
 
   return {
-    scene, sun, state, update, setTime, cycleTime, setRain, toggleRain,
+    scene, sun, state, update, setTime, cycleTime, setRain, toggleRain, setPerf,
     get raining() { return state.raining; },
     get timeName() { return state.timeName; },
     get rainAmount() { return state.rainAmount; },
