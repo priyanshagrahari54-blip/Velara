@@ -238,8 +238,8 @@ def render_studio():
         scene.view_settings.exposure = 1.25
     except Exception:
         pass
-    scene.render.resolution_x = A["rx"]
-    scene.render.resolution_y = A["ry"]
+    scene.render.resolution_x = 896
+    scene.render.resolution_y = 608
     scene.render.filepath = STUDIO_PNG
     scene.render.image_settings.file_format = "PNG"
     bpy.ops.render.render(write_still=True)
