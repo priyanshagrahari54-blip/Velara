@@ -595,11 +595,12 @@ def render_studio():
 
     bpy.ops.mesh.primitive_plane_add(size=18, location=(0, 0, -0.01))
     ground = bpy.context.active_object
-    gm = bpy.data.materials.new("StudioFloor")
+    gm = bpy.data.materials.new("ShowroomFloor")
     gm.use_nodes = True
     gb = gm.node_tree.nodes["Principled BSDF"]
-    set_input(gb, ["Base Color"], (0.55, 0.57, 0.60, 1.0))
-    set_input(gb, ["Roughness"], 0.45)
+    set_input(gb, ["Base Color"], (0.03, 0.03, 0.045, 1.0))
+    set_input(gb, ["Roughness"], 0.12)      # glossy — neon reflections
+    set_input(gb, ["Metallic"], 0.6)
     ground.data.materials.append(gm)
     helpers.append(ground)
 
@@ -616,10 +617,11 @@ def render_studio():
     scene.camera = cam
     helpers += [cam, tgt]
 
-    # 3-point studio: key (warm) + fill (cool) + rim
-    for nm, col, en, rot in (("Key", (1.0, 0.96, 0.9), 3.2, (0.9, 0.4, 0.8)),
-                             ("Fill", (0.85, 0.92, 1.0), 1.3, (0.9, -0.7, 0.5)),
-                             ("Rim", (1.0, 1.0, 1.0), 2.6, (1.3, 2.6, -0.4))):
+    # NEON SHOWROOM (concept-image mood): cyan + magenta rim, white key
+    for nm, col, en, rot in (("Key", (1.0, 0.97, 0.92), 2.6, (0.9, 0.4, 0.8)),
+                             ("RimCyan", (0.15, 0.85, 1.0), 4.5, (1.25, 2.4, 0.9)),
+                             ("RimMag", (1.0, 0.15, 0.65), 4.0, (1.25, 2.4, -0.9)),
+                             ("Fill", (0.6, 0.7, 0.9), 0.8, (0.9, -0.7, 0.5))):
         ld = bpy.data.lights.new(nm, "SUN")
         lo = bpy.data.objects.new(nm, ld)
         scene.collection.objects.link(lo)
@@ -628,15 +630,19 @@ def render_studio():
         lo.rotation_euler = rot   # OBJECT ghumao, light-data nahi!
         helpers.append(lo)
 
-    world = bpy.data.worlds.new("StudioW")
+    world = bpy.data.worlds.new("ShowroomW")
     world.use_nodes = True
     wbg = next(n for n in world.node_tree.nodes if n.type == "BACKGROUND")
-    set_input(wbg, ["Color"], (0.38, 0.40, 0.44, 1.0))
+    set_input(wbg, ["Color"], (0.015, 0.018, 0.03, 1.0))
+    vol = world.node_tree.nodes.new("ShaderNodeVolumePrincipled")
+    set_input(vol, ["Density"], 0.006)
+    wout = next(n for n in world.node_tree.nodes if n.type == "OUTPUT_WORLD")
+    world.node_tree.links.new(vol.outputs["Volume"], wout.inputs["Volume"])
     scene.world = world
 
     dev = setup_cycles(samples=max(48, A["samples"] // 2))
     try:
-        scene.view_settings.exposure = 1.25
+        scene.view_settings.exposure = 1.1
     except Exception:
         pass
     scene.render.resolution_x = A["rx"]
