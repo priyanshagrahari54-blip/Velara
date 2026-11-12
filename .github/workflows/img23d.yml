@@ -36,8 +36,9 @@ jobs:
         run: |
           pip install --quiet torch torchvision --index-url https://download.pytorch.org/whl/cpu
           git clone -q --depth 1 https://github.com/VAST-AI-Research/TripoSR.git /tmp/TripoSR
-          pip install --quiet -r /tmp/TripoSR/requirements.txt
-          pip install --quiet fast-simplification matplotlib scipy rembg onnxruntime
+          grep -v "torchmcubes" /tmp/TripoSR/requirements.txt > /tmp/req.txt
+          pip install --quiet -r /tmp/req.txt
+          pip install --quiet fast-simplification matplotlib scipy rembg onnxruntime PyMCubes
           python3 -c "import sys; sys.path.insert(0,'/tmp/TripoSR'); import tsr; print('tsr import OK')"
 
       - name: Resolve + claim img23d jobs

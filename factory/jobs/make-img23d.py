@@ -9,9 +9,35 @@ Output: factory/out/<out_name>.glb (+ _preview.png)   Licence: CC0 (AI self-made
 import json
 import os
 import sys
+import types
 import urllib.request
 
 import numpy as np
+
+
+def _patch_torchmcubes():
+    """torchmcubes CUDA-compile hota hai (CPU runner pe fail) — PyMCubes se shim."""
+    try:
+        import torchmcubes  # noqa: F401
+        return
+    except ImportError:
+        pass
+    import torch
+    from mcubes import marching_cubes as _pmc
+
+    tm = types.ModuleType("torchmcubes")
+
+    def marching_cubes(vert_values, iso_value=0.0):
+        v = vert_values.detach().cpu().numpy().astype(np.float32)
+        verts, faces = _pmc(v, float(iso_value))
+        return (torch.from_numpy(verts.astype(np.float32)),
+                torch.from_numpy(faces.astype(np.int64)))
+
+    tm.marching_cubes = marching_cubes
+    sys.modules["torchmcubes"] = tm
+
+
+_patch_torchmcubes()
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.normpath(os.path.join(HERE, "..", "out"))
@@ -65,6 +91,8 @@ def fetch():
 @step("load_model")
 def load():
     import torch
+    if os.path.isdir("/tmp/TripoSR") and "/tmp/TripoSR" not in sys.path:
+        sys.path.insert(0, "/tmp/TripoSR")
     from tsr.system import TSR
     R["device"] = "cpu"
     m = TSR.from_pretrained("stabilityai/TripoSR",
