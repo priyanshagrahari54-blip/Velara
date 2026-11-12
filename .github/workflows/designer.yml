@@ -61,6 +61,7 @@ jobs:
           picked = []
           files = sorted(glob.glob("factory/queue/*.json"))
           jobs = [(f, json.load(open(f))) for f in files]
+          jobs = [(f, j) for f, j in jobs if j.get("script") != "make-img23d.py"]  # img23d = artist workflow
           now = time.time()
           if sel and sel != "next":
               ids = [x.strip() for x in sel.split(",") if x.strip()]

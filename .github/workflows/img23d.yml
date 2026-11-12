@@ -1,0 +1,118 @@
+name: 3D Artist (image-to-3D)
+
+# ---------------------------------------------------------------------------
+# VELARA ka TripoSR worker: user-chosen IMAGE -> asli 3D mesh (vertex colors).
+# CPU-runner par chalta hai (16GB RAM). Sirf make-img23d.py jobs uthata hai.
+# ---------------------------------------------------------------------------
+on:
+  workflow_dispatch:
+    inputs:
+      jobs:
+        description: 'img23d job ids comma-sep, ya "next"'
+        required: false
+        default: 'next'
+  schedule:
+    - cron: '53 */6 * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: img23d-artist
+  cancel-in-progress: false
+
+jobs:
+  triposr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install torch-cpu + TripoSR + deps
+        run: |
+          pip install --quiet torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          git clone -q --depth 1 https://github.com/VAST-AI-Research/TripoSR.git /tmp/TripoSR
+          pip install --quiet -r /tmp/TripoSR/requirements.txt
+          pip install --quiet fast-simplification matplotlib scipy rembg onnxruntime
+          python3 -c "import sys; sys.path.insert(0,'/tmp/TripoSR'); import tsr; print('tsr import OK')"
+
+      - name: Resolve + claim img23d jobs
+        id: resolve
+        run: |
+          python3 - <<'PYRESOLVE'
+          import json, os, time, glob
+          sel = os.environ.get("SEL", "next")
+          files = sorted(glob.glob("factory/queue/*.json"))
+          jobs = [(f, json.load(open(f))) for f in files]
+          now = time.time()
+          if sel != "next":
+              ids = [x.strip() for x in sel.split(",") if x.strip()]
+              picked = [(f, j) for f, j in jobs if j["id"] in ids
+                        and j.get("script") == "make-img23d.py"
+                        and j.get("status") in ("pending", "failed")]
+          else:
+              pend = [(f, j) for f, j in jobs
+                      if j.get("script") == "make-img23d.py"
+                      and (j.get("status") == "pending"
+                           or (j.get("status") == "running" and now - j.get("claimed", 0) > 3600))]
+              pend.sort(key=lambda fj: (fj[1].get("priority", 5), fj[1]["id"]))
+              picked = pend[:1]     # ek image per run — RAM + timeout safe
+          for f, j in picked:
+              j["status"] = "running"; j["worker"] = "artist-actions-cpu"; j["claimed"] = int(now)
+              json.dump(j, open(f, "w"), indent=1)
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write("count=" + str(len(picked)) + "\n")
+              out.write("args<<RESOLVE_EOF\n")
+              for f, j in picked:
+                  a = " ".join([str(j.get("image_key", j["id"].replace("img23d-", ""))), j["id"],
+                                str(j.get("mc_res", 196))])
+                  out.write(a + "\n")
+              out.write("RESOLVE_EOF\n")
+          print("claimed:", [j["id"] for _, j in picked])
+          PYRESOLVE
+        env:
+          SEL: ${{ github.event.inputs.jobs || 'next' }}
+
+      - name: Run image->3D
+        if: steps.resolve.outputs.count != '0'
+        run: |
+          export HF_HOME=/tmp/hf
+          while read -r a; do
+            [ -z "$a" ] && continue
+            echo "=== artist: $a ==="
+            python3 factory/jobs/make-img23d.py -- $a
+          done <<< "${{ steps.resolve.outputs.args }}"
+
+      - name: Verify GLBs + update queue + commit
+        if: steps.resolve.outputs.count != '0'
+        run: |
+          python3 - <<'PYVERIFY'
+          import glob, json, os, struct, hashlib
+          for glb in glob.glob("factory/out/img23d-*.glb"):
+              with open(glb, "rb") as f:
+                  head = f.read(4)
+              assert head == b"glTF", glb
+              sz = os.path.getsize(glb)
+              print(f"VERIFY {os.path.basename(glb)}: {sz} bytes OK")
+              jid = os.path.basename(glb)[:-4]
+              qf = f"factory/queue/{jid}.json"
+              if os.path.exists(qf):
+                  j = json.load(open(qf))
+                  j["status"] = "review"     # DM user-se approve karwayega
+                  j["result"] = glb
+                  j["bytes"] = sz
+                  j["sha256"] = hashlib.sha256(open(glb, "rb").read()).hexdigest()[:16]
+                  json.dump(j, open(qf, "w"), indent=1)
+          PYVERIFY
+          git config user.name "artist-bot"
+          git config user.email "artist@velara"
+          git add factory/out factory/queue
+          git diff --cached --quiet && echo "nothing to commit" && exit 0
+          git commit -q -m "artist(img23d): image->3D results, review pending [skip ci]"
+          git pull --rebase -q origin main || echo "rebase conflict — DM sambhalega"
+          git push || echo "push fail — agla run sambhalega"

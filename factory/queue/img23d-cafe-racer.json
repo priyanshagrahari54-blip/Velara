@@ -1,0 +1,10 @@
+{
+ "id": "img23d-cafe-racer",
+ "script": "make-img23d.py",
+ "args": [],
+ "image_key": "cafe-racer",
+ "mc_res": 196,
+ "brief": "Image->3D (TripoSR) \u2014 concept #superbike-black \u2014 user 'image jaisa' chahta hai",
+ "status": "pending",
+ "priority": 1
+}
