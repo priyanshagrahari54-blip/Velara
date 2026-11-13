@@ -71,7 +71,10 @@ const GradeShader = {
 
 export function createPostFX(renderer, scene, camera) {
   try {
-    const size = renderer.getSize(new THREE.Vector2());
+    // IMPORTANT: drawing-buffer size (pixelRatio sahit) — warna emergency/
+    // low tiers (0.24-0.8 ratio) composer ko full-res render karta aur
+    // software GPUs crawl kar jaate hain.
+    const size = renderer.getDrawingBufferSize(new THREE.Vector2());
     const target = new THREE.WebGLRenderTarget(size.x, size.y, {
       type: THREE.HalfFloatType,
       samples: 4,
@@ -83,6 +86,7 @@ export function createPostFX(renderer, scene, camera) {
     const grade = new ShaderPass(GradeShader);
     composer.addPass(grade);
     composer.addPass(new OutputPass());
+    composer.setSize(size.x, size.y);
     return { composer, bloom, grade };
   } catch (err) {
     console.warn('[renderer] post-processing unavailable:', err.message);

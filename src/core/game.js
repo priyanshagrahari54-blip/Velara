@@ -223,7 +223,10 @@ export class VelaraGame {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
-    if (this.postfx) this.postfx.composer.setSize(w, h);
+    if (this.postfx) {
+      const db = this.renderer.getDrawingBufferSize(new THREE.Vector2());
+      this.postfx.composer.setSize(db.x, db.y);
+    }
   }
 
   onResize() { this._resize(); }
@@ -527,6 +530,10 @@ export class VelaraGame {
             this._dynScale = nxt;
             this.renderer.setPixelRatio(nxt);
             this.renderer.setSize(window.innerWidth, window.innerHeight);
+            if (this.postfx) {
+              const db = this.renderer.getDrawingBufferSize(new THREE.Vector2());
+              this.postfx.composer.setSize(db.x, db.y);
+            }
           }
         }
       }
