@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 // designed-model loader (factory assets: velara-gt/titan-rs/... Draco GLBs)
 let _loader = null;
@@ -150,9 +151,9 @@ export class GameVehicle {
 
     // ------------------------------------------------------------- wheels
     this.wheelMeshes = [];
-    const tireGeo = new THREE.CylinderGeometry(P.wheelR, P.wheelR, 0.33, 20);
+    const tireGeo = new THREE.CylinderGeometry(P.wheelR, P.wheelR, 0.33, 28);
     tireGeo.rotateZ(Math.PI / 2);
-    const rimGeo = new THREE.CylinderGeometry(P.wheelR * 0.62, P.wheelR * 0.62, 0.35, 12);
+    const rimGeo = new THREE.CylinderGeometry(P.wheelR * 0.62, P.wheelR * 0.62, 0.35, 18);
     rimGeo.rotateZ(Math.PI / 2);
     const tireMat = new THREE.MeshStandardMaterial({ color: 0x0b0c0d, roughness: 0.95 });
     const rimMat = new THREE.MeshStandardMaterial({ color: 0x9aa4b2, roughness: 0.25, metalness: 0.95 });
@@ -197,6 +198,12 @@ export class GameVehicle {
         if (o.name === 'LightRear') tail = o;
       });
       this.group.add(m);
+      // BUGFIX (mobile-QA confirmed): GLB wheels group ke ANDAR nested the, par
+      // update() unhe WORLD transform se sync karta hai → double-apply → tyres
+      // gaadi se ~14m door ud jaate the. Fix: wheels ko scene-level par attach
+      // (world transform preserved) — ab procedural wheels jaisa hi sync.
+      m.updateMatrixWorld(true);
+      for (const w of wheels) this.scene.attach(w);
       // procedural body chhupao (group children pehle se the)
       for (const c of this.group.children) {
         if (c !== m) c.visible = false;
@@ -221,20 +228,23 @@ export class GameVehicle {
     const W = P.width, L = P.length;
     const cast = [];
 
-    const addBox = (mat, w, h, l, x, y, z, shadow = true) => {
-      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, l), mat);
+    const addBox = (mat, w, h, l, x, y, z, shadow = true, rounded = false) => {
+      const geo = rounded
+        ? new RoundedBoxGeometry(w, h, l, 2, Math.min(0.09, Math.min(w, h, l) * 0.22))
+        : new THREE.BoxGeometry(w, h, l);
+      const m = new THREE.Mesh(geo, mat);
       m.position.set(x, y, z);
       if (shadow) { m.castShadow = true; cast.push(m); }
       g.add(m);
       return m;
     };
 
-    // body core
-    addBox(paint, W, 0.52, L, 0, 0.02, 0);
-    addBox(paint, W - 0.1, 0.3, 0.7, 0, 0.16, -(L / 2 + 0.07)); // nose
+    // body core — ROUNDED (smooth curves, dabbe nahi)
+    addBox(paint, W, 0.52, L, 0, 0.02, 0, true, true);
+    addBox(paint, W - 0.1, 0.3, 0.7, 0, 0.16, -(L / 2 + 0.07), true, true); // nose
 
     if (P.shape === 'van') {
-      addBox(paint, W - 0.14, 0.98, L - 0.9, 0, 0.75, 0.25);        // tall cargo box
+      addBox(paint, W - 0.14, 0.98, L - 0.9, 0, 0.75, 0.25, true, true);        // tall cargo box
       addBox(glass, W - 0.34, 0.4, 0.1, 0, 0.86, -(L / 2 - 0.18));  // windshield
       addBox(trim, W - 0.2, 0.09, L - 1.3, 0, 1.28, 0.3);           // roof rack
       addBox(trim, 0.08, 0.5, 0.08, W / 2 - 0.3, 0.9, 1.4);         // rack posts
@@ -242,21 +252,21 @@ export class GameVehicle {
       addBox(trim, 0.08, 0.5, 0.08, W / 2 - 0.3, 0.9, -0.8);
       addBox(trim, 0.08, 0.5, 0.08, -(W / 2 - 0.3), 0.9, -0.8);
     } else if (P.shape === 'hatch') {
-      addBox(glass, W - 0.3, P.cabinH, P.cabinL, 0, 0.52, 0.15);
+      addBox(glass, W - 0.3, P.cabinH, P.cabinL, 0, 0.52, 0.15, true, true);
       addBox(paint, W - 0.44, 0.08, P.cabinL - 0.7, 0, 0.52 + P.cabinH / 2, 0.18);
       addBox(trim, 0.1, 0.14, P.cabinL - 0.6, W / 2 - 0.12, 0.62 + P.cabinH / 2, 0.18); // roof rails
       addBox(trim, 0.1, 0.14, P.cabinL - 0.6, -(W / 2 - 0.12), 0.62 + P.cabinH / 2, 0.18);
     } else if (P.shape === 'muscle') {
-      addBox(glass, W - 0.3, P.cabinH, P.cabinL, 0, 0.52, 0.38);
+      addBox(glass, W - 0.3, P.cabinH, P.cabinL, 0, 0.52, 0.38, true, true);
       addBox(paint, W - 0.46, 0.08, P.cabinL - 0.8, 0, 0.78, 0.4);
       addBox(trim, 0.5, 0.12, 0.8, 0, 0.62, -(L / 2 - 1.1));        // hood scoop
       addBox(trim, W - 0.18, 0.09, 0.5, 0, 0.72, L / 2 - 0.25);     // big spoiler
       addBox(trim, 0.09, 0.3, 0.09, W / 2 - 0.25, 0.56, L / 2 - 0.25);
       addBox(trim, 0.09, 0.3, 0.09, -(W / 2 - 0.25), 0.56, L / 2 - 0.25);
     } else { // coupe (hero) — sports silhouette: wedge nose, tapered canopy
-      const cab = addBox(glass, W - 0.3, P.cabinH * 0.62, P.cabinL * 0.86, 0, 0.5, 0.3);
+      const cab = addBox(glass, W - 0.3, P.cabinH * 0.62, P.cabinL * 0.86, 0, 0.5, 0.3, true, true);
       cab.scale.set(1, 1, 1);
-      const roof = addBox(paint, W - 0.62, 0.09, P.cabinL * 0.55, 0, 0.5 + P.cabinH * 0.62 + 0.04, 0.42);
+      const roof = addBox(paint, W - 0.62, 0.09, P.cabinL * 0.55, 0, 0.5 + P.cabinH * 0.62 + 0.04, 0.42, true, true);
       roof.scale.z = 1;
       const wsF = addBox(glass, W - 0.4, 0.09, 0.9, 0, 0.72, 0.3 - P.cabinL * 0.5 - 0.1);
       wsF.rotation.x = -0.62;                                     // raked windshield
@@ -419,24 +429,31 @@ export class GameVehicle {
     const P = this.preset;
     const massK = P.mass / 950;
 
-    // steering with speed-sensitive limit
+    // FEEL: steering — attack derawar, center-return tez (touch pads par bhi smooth)
     const kmh = this.getSpeedKmh();
     const maxNow = P.steer / (1 + kmh * 0.014);
     const target = input.steer * maxNow;
-    this.steerCurrent += (target - this.steerCurrent) * Math.min(1, dt * 9);
+    const steerRate = Math.abs(target) > Math.abs(this.steerCurrent) ? 5.5 : 9.5;
+    this.steerCurrent += (target - this.steerCurrent) * Math.min(1, dt * steerRate);
     v.setSteeringValue(this.steerCurrent, 0);
     v.setSteeringValue(this.steerCurrent, 1);
+
+    // FEEL: throttle ramp — digital GAS pad par bhi real-car jaisi pickup
+    if (this.throttleCurrent === undefined) this.throttleCurrent = 0;
+    const tRate = Math.abs(input.throttle) > Math.abs(this.throttleCurrent) ? 4.0 : 6.5;
+    this.throttleCurrent += (input.throttle - this.throttleCurrent) * Math.min(1, dt * tRate);
+    const throttle = this.throttleCurrent;
 
     // throttle / brake / reverse — per-vehicle speed limiter (ADR-005/006)
     const fs = this.getForwardSpeed();
     let engine = 0, brake = 0;
     const governed = fs * 3.6 > P.topKmh;
-    if (input.throttle > 0.02) {
+    if (throttle > 0.02) {
       if (fs < -1.2) brake = P.brake;
-      else engine = governed ? 0 : P.engine * input.throttle;
-    } else if (input.throttle < -0.02) {
+      else engine = governed ? 0 : P.engine * throttle;
+    } else if (throttle < -0.02) {
       if (fs > 1.2) brake = P.brake * 0.9;
-      else engine = P.reverse * input.throttle; // negative => reverse
+      else engine = P.reverse * throttle; // negative => reverse
     } else {
       brake = 2.2; // engine drag
     }

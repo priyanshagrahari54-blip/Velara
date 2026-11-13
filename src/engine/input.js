@@ -115,10 +115,11 @@ export class InputManager {
   footInput() {
     const k = this.keys;
     const stick = this.getStickValue();
+    const stickFull = this.isTouch && Math.hypot(stick.x, stick.y) > 0.9; // full-deflection = sprint
     return {
       x: ((k.KeyD || k.ArrowRight) ? 1 : 0) - ((k.KeyA || k.ArrowLeft) ? 1 : 0) + stick.x,
       z: ((k.KeyW || k.ArrowUp) ? 1 : 0) - ((k.KeyS || k.ArrowDown) ? 1 : 0) - stick.y,
-      sprint: !!(k.ShiftLeft || k.ShiftRight),
+      sprint: !!(k.ShiftLeft || k.ShiftRight) || stickFull,
       jump: !!k.Space,
     };
   }

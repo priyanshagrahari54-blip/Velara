@@ -53,6 +53,7 @@ export function createEnvironment(scene, renderer) {
     topColor: { value: new THREE.Color(PRESETS.night.skyTop) },
     bottomColor: { value: new THREE.Color(PRESETS.night.skyBottom) },
     exponent: { value: 0.7 },
+    uTime: { value: 0 },
   };
   const skyMat = new THREE.ShaderMaterial({
     uniforms: skyUniforms,
@@ -70,10 +71,35 @@ export function createEnvironment(scene, renderer) {
       uniform vec3 topColor;
       uniform vec3 bottomColor;
       uniform float exponent;
+      uniform float uTime;
       varying vec3 vWorldPosition;
+      // --- procedural clouds (mobile-safe: no derivatives) ---
+      float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
+      float vnoise(vec2 p) {
+        vec2 i = floor(p), f = fract(p);
+        f = f * f * (3.0 - 2.0 * f);
+        return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+                   mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+      }
+      float fbm(vec2 p) {
+        float v = 0.0, a = 0.5;
+        for (int i = 0; i < 5; i++) { v += a * vnoise(p); p *= 2.03; a *= 0.5; }
+        return v;
+      }
       void main() {
-        float h = normalize(vWorldPosition).y;
-        gl_FragColor = vec4(mix(bottomColor, topColor, pow(max(h, 0.0), exponent)), 1.0);
+        vec3 d = normalize(vWorldPosition);
+        float h = max(d.y, 0.0);
+        vec3 col = mix(bottomColor, topColor, pow(h, exponent));
+        // layered clouds — planar projection upar wale aasmaan par
+        vec2 uv = d.xz / max(d.y, 0.09);
+        float c1 = fbm(uv * 0.5 + vec2(uTime * 0.006, uTime * 0.0022));
+        float c2 = fbm(uv * 1.35 - vec2(uTime * 0.004, 0.0));
+        float cover = smoothstep(0.40, 0.78, c1 * 0.62 + c2 * 0.38);
+        float fade = smoothstep(0.02, 0.24, d.y);          // horizon par dissolve
+        vec3 cloudBase = mix(bottomColor, topColor, 0.5);
+        vec3 cloudCol = cloudBase * (1.05 + 0.14 * c2);    // sky brightness follow karta hai
+        col = mix(col, cloudCol, cover * fade * 0.88);
+        gl_FragColor = vec4(col, 1.0);
       }`,
   });
   const sky = new THREE.Mesh(new THREE.SphereGeometry(950, 24, 12), skyMat);
@@ -294,6 +320,7 @@ export function createEnvironment(scene, renderer) {
 
   // ---------------- per-frame update ----------------
   function update(dt, camera) {
+    skyUniforms.uTime.value += dt; // cloud drift
     // sun flare: follow the sun, fade by view alignment (golden hour only)
     flare.position.copy(sun.position).multiplyScalar(3.2);
     camera.getWorldDirection(camDir);

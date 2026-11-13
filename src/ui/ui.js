@@ -161,6 +161,13 @@ const CSS = `
     #v-speedo .kmh { font-size: 42px; }
     #v-speedo { width: 170px; }
     #v-minimap { width: 96px; height: 96px; }
+    /* MOBILE LAYOUT — controls ke upar HUD nahi (QA-fix: overlap tha) */
+    #v-minimap { left: 12px; right: auto; bottom: auto; top: 12px; width: 84px; height: 84px; }
+    #v-clock { display: none; }
+    #v-healthbar { left: 12px; bottom: auto; top: 104px; }
+    #v-speedo { right: 50%; transform: translateX(50%); bottom: 14px; text-align: center; }
+    #v-money { top: 14px; right: 16px; }
+    #v-weapon { right: 16px; bottom: auto; top: 44px; }
   }
 
   /* ---------- weapon HUD ---------- */

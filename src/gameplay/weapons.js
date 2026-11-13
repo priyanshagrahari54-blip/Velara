@@ -101,21 +101,57 @@ export class WeaponManager {
     this.flashLight = new THREE.PointLight(0xffc98a, 0, 10, 2);
     this.scene.add(this.flashLight);
 
-    // tracer pool
+    // tracer pool — VISIBLE streaks (1px lines phone par dikhte hi nahi the)
     this.tracers = [];
+    const tracerGeo = new THREE.CylinderGeometry(0.022, 0.022, 1, 5, 1, true);
+    tracerGeo.translate(0, 0.5, 0); // base at origin — scale.y = length, oriented along +Y
     for (let i = 0; i < 14; i++) {
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
-      const mat = new THREE.LineBasicMaterial({
-        color: 0xffdf9e, transparent: true, opacity: 0,
-        blending: THREE.AdditiveBlending, depthWrite: false,
+      const mat = new THREE.MeshBasicMaterial({
+        color: 0xffe2a8, transparent: true, opacity: 0,
+        blending: THREE.AdditiveBlending, depthWrite: false, fog: false,
       });
-      const line = new THREE.Line(geo, mat);
-      line.frustumCulled = false;
-      this.scene.add(line);
-      this.tracers.push({ line, life: 0 });
+      const mesh = new THREE.Mesh(tracerGeo, mat);
+      mesh.frustumCulled = false;
+      mesh.visible = false;
+      this.scene.add(mesh);
+      this.tracers.push({ mesh, life: 0 });
     }
     this._tracerCursor = 0;
+
+    // muzzle + impact flash sprites (additive)
+    const mkFlashTex = (c0, c1) => {
+      const cnv = document.createElement('canvas');
+      cnv.width = cnv.height = 64;
+      const c = cnv.getContext('2d');
+      const g = c.createRadialGradient(32, 32, 1, 32, 32, 32);
+      g.addColorStop(0, c0);
+      g.addColorStop(0.35, c1);
+      g.addColorStop(1, 'rgba(255,120,40,0)');
+      c.fillStyle = g;
+      c.fillRect(0, 0, 64, 64);
+      const t = new THREE.CanvasTexture(cnv);
+      t.colorSpace = THREE.SRGBColorSpace;
+      return t;
+    };
+    this._muzzleTex = mkFlashTex('rgba(255,246,220,1)', 'rgba(255,190,90,0.85)');
+    this._impactTex = mkFlashTex('rgba(255,255,255,1)', 'rgba(255,170,80,0.8)');
+    const mkSpritePool = (tex, n) => {
+      const pool = [];
+      for (let i = 0; i < n; i++) {
+        const s = new THREE.Sprite(new THREE.SpriteMaterial({
+          map: tex, transparent: true, opacity: 0, depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }));
+        s.visible = false;
+        this.scene.add(s);
+        pool.push({ sprite: s, life: 0, max: 1 });
+      }
+      return pool;
+    };
+    this.muzzleFlashes = mkSpritePool(this._muzzleTex, 3);
+    this.impactFlashes = mkSpritePool(this._impactTex, 5);
+    this._muzzleCursor = 0;
+    this._impactCursor = 0;
 
     // spark pool (points, like tire smoke but hot orange)
     {
@@ -166,11 +202,34 @@ export class WeaponManager {
   _spawnTracer(from, to) {
     const t = this.tracers[this._tracerCursor];
     this._tracerCursor = (this._tracerCursor + 1) % this.tracers.length;
-    const p = t.line.geometry.attributes.position;
-    p.setXYZ(0, from.x, from.y, from.z);
-    p.setXYZ(1, to.x, to.y, to.z);
-    p.needsUpdate = true;
-    t.life = 0.09;
+    const dir = new THREE.Vector3().subVectors(to, from);
+    const len = dir.length();
+    if (len < 0.01) return;
+    dir.normalize();
+    t.mesh.position.copy(from);
+    t.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+    t.mesh.scale.set(1, len, 1);
+    t.mesh.visible = true;
+    t.life = 0.16;
+  }
+
+  _muzzleFlash(pos, size) {
+    const f = this.muzzleFlashes[this._muzzleCursor];
+    this._muzzleCursor = (this._muzzleCursor + 1) % this.muzzleFlashes.length;
+    f.sprite.position.copy(pos);
+    f.sprite.scale.set(size, size, 1);
+    f.sprite.material.rotation = Math.random() * Math.PI * 2;
+    f.sprite.visible = true;
+    f.life = f.max = 0.07;
+  }
+
+  _impactFlash(pos, size) {
+    const f = this.impactFlashes[this._impactCursor];
+    this._impactCursor = (this._impactCursor + 1) % this.impactFlashes.length;
+    f.sprite.position.copy(pos);
+    f.sprite.scale.set(size, size, 1);
+    f.sprite.visible = true;
+    f.life = f.max = 0.12;
   }
 
   _spawnSparks(point, normal) {
@@ -197,15 +256,30 @@ export class WeaponManager {
   }
 
   _updateEffects(dt) {
-    // flash light decay
-    this.flashLight.intensity *= Math.exp(-dt * 34);
+    // flash light decay (thoda der tak — visible recoil feedback)
+    this.flashLight.intensity *= Math.exp(-dt * 16);
     if (this.flashLight.intensity < 0.3) this.flashLight.intensity = 0;
 
     // tracers
     for (const t of this.tracers) {
       if (t.life <= 0) continue;
       t.life -= dt;
-      t.line.material.opacity = Math.max(0, t.life / 0.09) * 0.9;
+      const k = Math.max(0, t.life / 0.16);
+      t.mesh.material.opacity = k * 0.85;
+      t.mesh.scale.x = t.mesh.scale.z = 0.5 + k * 0.5;
+      if (t.life <= 0) t.mesh.visible = false;
+    }
+
+    // muzzle + impact flash sprites
+    for (const pool of [this.muzzleFlashes, this.impactFlashes]) {
+      for (const f of pool) {
+        if (f.life <= 0) continue;
+        f.life -= dt;
+        const k = Math.max(0, f.life / f.max);
+        f.sprite.material.opacity = k;
+        f.sprite.scale.multiplyScalar(1 + dt * 6); // quick expand
+        if (f.life <= 0) f.sprite.visible = false;
+      }
     }
 
     // sparks
@@ -300,7 +374,8 @@ export class WeaponManager {
     // muzzle world position (for visuals)
     const muzzleWorld = this.player.getMuzzleWorld(new THREE.Vector3());
     this.flashLight.position.copy(muzzleWorld);
-    this.flashLight.intensity = w.flash;
+    this.flashLight.intensity = w.flash * 2.2;
+    this._muzzleFlash(muzzleWorld, 0.42 + w.flash * 0.012);
 
     // ray origin = camera (crosshair-accurate), dir = camera forward + spread
     const origin = new THREE.Vector3();
@@ -334,6 +409,7 @@ export class WeaponManager {
         this._spawnSparks(
           { x: end.x, y: end.y, z: end.z },
           { x: n.x, y: n.y, z: n.z });
+        this._impactFlash(new THREE.Vector3(end.x, end.y, end.z), 0.34);
         this._spawnDecal({ x: end.x, y: end.y, z: end.z }, { x: n.x, y: n.y, z: n.z });
 
         // physical impulse at the hit point (relative to CoM — ADR-001 lesson)
