@@ -1,0 +1,12 @@
+{
+ "id": "car-v2-velara-gt",
+ "script": "make-car-v2.py",
+ "args": [
+  "velara-gt"
+ ],
+ "brief": "Velara GT v2 \u2014 LOFTED ultra-detail sports car (red, spoiler). Hero vehicle.",
+ "status": "pending",
+ "priority": 1,
+ "result": "factory/out/velara-gt.glb",
+ "worker": null
+}

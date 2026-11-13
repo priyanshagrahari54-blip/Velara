@@ -535,7 +535,11 @@ export class VelaraGame {
     // start screen: the 3D backdrop renders at ~20fps (saves battery /
     // keeps weak GPUs alive); gameplay always renders full rate.
     if (this.state === 'start' && ((this._bgFrame = (this._bgFrame || 0) + 1) % 3) !== 1) return;
-    if (this.postfx && this.quality.config.bloom > 0) {
+    if (this.postfx) {
+      if (this.postfx.grade) {
+        this._gradeT = (this._gradeT || 0) + dt;
+        this.postfx.grade.uniforms.uTime.value = this._gradeT;
+      }
       this.postfx.composer.render();
     } else {
       this.renderer.render(this.scene, this.camera);

@@ -1,0 +1,12 @@
+{
+ "id": "car-v2-police",
+ "script": "make-car-v2.py",
+ "args": [
+  "police"
+ ],
+ "brief": "Police Interceptor v2 \u2014 LOFTED (white, lightbar).",
+ "status": "pending",
+ "priority": 1,
+ "result": "factory/out/police.glb",
+ "worker": null
+}

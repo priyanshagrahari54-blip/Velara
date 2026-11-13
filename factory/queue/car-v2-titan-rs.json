@@ -1,0 +1,12 @@
+{
+ "id": "car-v2-titan-rs",
+ "script": "make-car-v2.py",
+ "args": [
+  "titan-rs"
+ ],
+ "brief": "Titan RS v2 \u2014 LOFTED muscle sedan (deep blue).",
+ "status": "pending",
+ "priority": 1,
+ "result": "factory/out/titan-rs.glb",
+ "worker": null
+}

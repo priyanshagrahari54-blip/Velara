@@ -1,0 +1,12 @@
+{
+ "id": "car-v2-pico-s",
+ "script": "make-car-v2.py",
+ "args": [
+  "pico-s"
+ ],
+ "brief": "Pico S v2 \u2014 LOFTED hatchback (yellow).",
+ "status": "pending",
+ "priority": 1,
+ "result": "factory/out/pico-s.glb",
+ "worker": null
+}
