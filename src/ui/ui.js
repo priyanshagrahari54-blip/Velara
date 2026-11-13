@@ -41,8 +41,6 @@ const CSS = `
   /* ---------- HUD ---------- */
   #v-hud { position: absolute; inset: 0; display: none; }
   #v-brand { display: none; } /* cinematic minimal */
-  #v-clock { position: absolute; left: 20px; bottom: 148px; font-size: 11.5px; color: #cfd8e8;
-    letter-spacing: 0.08em; text-shadow: 0 1px 3px rgba(0,0,0,0.9); }
   #v-mission { position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
     text-align: center; max-width: 72vw; background: none; border: none;
     box-shadow: none; backdrop-filter: none; }
@@ -163,7 +161,6 @@ const CSS = `
     #v-minimap { width: 96px; height: 96px; }
     /* MOBILE LAYOUT — controls ke upar HUD nahi (QA-fix: overlap tha) */
     #v-minimap { left: 12px; right: auto; bottom: auto; top: 12px; width: 84px; height: 84px; }
-    #v-clock { display: none; }
     #v-healthbar { left: 12px; bottom: auto; top: 104px; }
     #v-speedo { right: 50%; transform: translateX(50%); bottom: 14px; text-align: center; }
     #v-money { top: 14px; right: 16px; }
@@ -244,7 +241,6 @@ export class UI {
       <div id="v-hud">
         <div id="v-debug"></div>
         <div id="v-brand">VELARA<small>CITY OF SHADOWS</small></div>
-        <div id="v-clock">23:40 · RAAT</div>
         <div id="v-mission" class="v-panel">
           <div class="mt">MISSION 1</div>
           <div class="md">Welcome to Velara</div>
@@ -320,7 +316,6 @@ export class UI {
     this.gearEl = this.speedoEl.querySelector('.gear');
     this.healthEl = this.$('v-healthfill');
     this.missionEl = this.$('v-mission');
-    this.clockEl = this.$('v-clock');
     this.moneyEl = this.$('v-money');
     this.promptEl = this.$('v-prompt');
     this.toastBox = this.$('v-toasts');
@@ -412,7 +407,6 @@ export class UI {
         : 'linear-gradient(90deg,#e05454,#f5a8a8)';
   }
 
-  setClock(text) { this.clockEl.textContent = text; }
   setMoney(v) { this.moneyEl.textContent = '₹ ' + v.toLocaleString('en-IN'); }
 
   setMission(index, title, desc, progress) {

@@ -11,9 +11,9 @@
       "ok": true,
       "detail": {
         "topMean": [
-          75,
-          70,
-          66
+          92,
+          67,
+          54
         ]
       }
     },
@@ -21,15 +21,15 @@
       "name": "env + sky",
       "ok": true,
       "detail": {
-        "timeName": "overcast",
+        "timeName": "dusk",
         "tier": "emergency",
         "mode": "foot",
         "fps": 60,
         "sky": {
           "visible": true,
           "scale": 0.15473684210526314,
-          "top": "#6e7d8b",
-          "bottom": "#b1bbc4"
+          "top": "#3c2a62",
+          "bottom": "#fda54d"
         },
         "vehicles": [
           {
@@ -230,7 +230,7 @@
       "name": "STEER pad → yaw change (>0.15 rad / 2s)",
       "ok": true,
       "detail": {
-        "yawDelta": 1.74,
+        "yawDelta": 1.76,
         "kmh": 21
       }
     },

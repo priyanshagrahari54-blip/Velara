@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { GRID, BLOCK, ROAD, CELL, EXTENT } from './city.js';
 
 // ---------------------------------------------------------------------------
@@ -131,11 +132,22 @@ export function createFoliage(scene, opts = {}) {
     const list = plan[key];
     if (!list.length) return resolve(null);
     foliageLoader().load(SOURCES[key], (gltf) => {
-      let src = null;
-      gltf.scene.traverse((o) => { if (o.isMesh && !src) src = o; });
-      if (!src) return resolve(null);
-      const mat = Array.isArray(src.material) ? src.material : [src.material];
-      const inst = new THREE.InstancedMesh(src.geometry, mat, list.length);
+      // GLB mein trunk/canopy ALAG meshes hote hain (per-material primitives)
+      // — sab ko groups ke saath merge karo, warna sirf pehla part instanced hota.
+      const geos = [];
+      const mats = [];
+      gltf.scene.updateMatrixWorld(true);
+      gltf.scene.traverse((o) => {
+        if (!o.isMesh) return;
+        const g = o.geometry.clone();
+        g.applyMatrix4(o.matrixWorld);
+        geos.push(g);
+        mats.push(...(Array.isArray(o.material) ? o.material : [o.material]));
+      });
+      if (!geos.length) return resolve(null);
+      const geo = geos.length === 1 ? geos[0] : mergeGeometries(geos, true);
+      if (!geo) return resolve(null);
+      const inst = new THREE.InstancedMesh(geo, mats, list.length);
       inst.castShadow = shadows && key !== 'tuft';
       inst.receiveShadow = true;
       place(inst, list);

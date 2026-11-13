@@ -43,7 +43,6 @@ export class VelaraGame {
     this.pickupsCollected = 0;
     this.cratesDestroyed = 0;
     this.rangeHits = 0;
-    this.gameMinutes = 14 * 60 + 25; // overcast afternoon start (Style S3)
     this._flipTimer = 0;
     this._touchJump = false;
     this._touchHorn = false;
@@ -95,7 +94,7 @@ export class VelaraGame {
     this.city = buildCity(this.scene, this.world, { profile: this.profile });
     // FULL GREEN CITY (user demand): factory-designed trees/bushes/grass,
     // instanced — low tiers par density aadhi + shadows off
-    createFoliage(this.scene, {
+    this.foliage = createFoliage(this.scene, {
       lowTier: this.quality.config.pixelRatio <= 0.55,
     });
     this.player = new Player(this.scene, this.world, this.city.groundMat, PLAYER_SPAWN);
@@ -246,7 +245,7 @@ export class VelaraGame {
     if (this._clockT < 1) return;
     this._clockT = 0;
     const phase = { day: 'DIN', dusk: 'SHAAM', night: 'RAAT', overcast: 'SUBAH' }[this.env.timeName] || '';
-    this.ui.setClock(this.env.clockString(), phase);
+    this.ui.setClock(this.env.clockString(), phase + (this.env.raining ? ' · 🌧️' : ''));
   }
 
   // ============================================================ actions
@@ -710,12 +709,7 @@ export class VelaraGame {
     this.city.update(dt, this.env, worldFocus);
     this.range.update(dt);
 
-    // -------------------------------------------------------------- clock
-    this.gameMinutes = (this.gameMinutes + dt * 0.5) % 1440;
-    const hh = String(Math.floor(this.gameMinutes / 60)).padStart(2, '0');
-    const mm = String(Math.floor(this.gameMinutes % 60)).padStart(2, '0');
-    const label = this.env.timeName === 'night' ? 'RAAT' : this.env.timeName === 'dusk' ? 'SHAAM' : 'DIN';
-    this.ui.setClock(`${hh}:${mm} · ${label}${this.env.raining ? ' · 🌧️' : ''}`);
+    // (clock ab _hudClock se — env day-night cycle driven, top-center chip)
 
     // ------------------------------------------------------------ pickups
     const px = this.mode === 'foot' ? this.player.position.x : this.activeVehicle.body.position.x;
