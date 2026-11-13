@@ -5,9 +5,8 @@
   "tree-street"
  ],
  "brief": "Street tree ~5.4m (trunk + 6-blob canopy, mottled vertex shading)",
- "status": "done",
+ "status": "pending",
  "priority": 1,
  "result": "factory/out/tree-street.glb",
- "worker": "actions-cpu",
- "claimed": 1794581505
+ "worker": null
 }

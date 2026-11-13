@@ -5,9 +5,8 @@
   "police"
  ],
  "brief": "police v2 REBAKE-FREE \u2014 paint material + vertex-AO (black-texture bug fix)",
- "status": "done",
+ "status": "pending",
  "priority": 1,
  "result": "factory/out/police.glb",
- "worker": "actions-cpu",
- "claimed": 1794581505
+ "worker": null
 }

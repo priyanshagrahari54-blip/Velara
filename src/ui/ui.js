@@ -387,6 +387,22 @@ export class UI {
     this.gearEl.textContent = gear;
   }
 
+  // day-night cycle clock (top-center chip)
+  setClock(time, phase) {
+    if (!this.clockEl) {
+      this.clockEl = document.createElement('div');
+      this.clockEl.id = 'v-clock';
+      this.clockEl.style.cssText = `position:fixed;top:calc(8px + env(safe-area-inset-top));left:50%;
+        transform:translateX(-50%);padding:4px 12px;border-radius:10px;
+        background:rgba(10,14,20,0.55);backdrop-filter:blur(6px);
+        color:#e8edf4;font:600 13px/1.3 system-ui,sans-serif;letter-spacing:0.5px;
+        border:1px solid rgba(255,255,255,0.14);z-index:30;pointer-events:none;
+        white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,0.5)`;
+      document.body.appendChild(this.clockEl);
+    }
+    this.clockEl.textContent = `${time}  ·  ${phase}`;
+  }
+
   setHealth(pct) {
     this.healthEl.style.width = Math.max(0, Math.min(100, pct)) + '%';
     this.healthEl.style.background = pct > 50

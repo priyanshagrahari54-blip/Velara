@@ -5,9 +5,8 @@
   "tree-park"
  ],
  "brief": "Park tree ~7.2m broad canopy",
- "status": "done",
+ "status": "pending",
  "priority": 1,
  "result": "factory/out/tree-park.glb",
- "worker": "actions-cpu",
- "claimed": 1794581505
+ "worker": null
 }

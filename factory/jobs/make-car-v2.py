@@ -535,9 +535,10 @@ def vertex_ao():
         g *= 0.97 + 0.06 * rng.random()
         g = max(0.35, min(1.0, g))
         col.data[i].color = (g, g, g, 1.0)
-    # glass canopy: halka top-light gradient
-    gm = globals().get("GLASS_M")
-    if gm and gm.type == "MESH":
+    # glass canopy: halka top-light gradient (GLASS_M material hota hai —
+    # MESH by-name dhoondo)
+    gm = next((o for o in bpy.data.objects if o.name == "Glass" and o.type == "MESH"), None)
+    if gm:
         gcol = gm.data.attributes.new("ao", "BYTE_COLOR", "POINT")
         for i, v in enumerate(gm.data.vertices):
             t = (v.co.z - zmin) / max(1e-6, zmax - zmin)
@@ -728,15 +729,25 @@ def export_glb():
 
 
 # ---------------------------------------------------------------- main
-build()
-vertex_ao()
-render_preview()
-render_studio()
-export_glb()
+# NOTE: blender --python exception par bhi exit-0 de sakta hai — workflow
+# galat "done" mark kar deta tha. Isliye: try/except + failure par sys.exit(1).
+try:
+    build()
+    vertex_ao()
+    render_preview()
+    render_studio()
+    export_glb()
+except Exception:
+    traceback.print_exc()
 
-body = globals()["BODY"]
-R["verts"] = len(body.data.vertices)
-R["tris"] = sum(len(p.vertices) - 2 for p in body.data.polygons)
-R["glb_bytes"] = os.path.getsize(GLB)
-R["glb"] = GLB
+body = globals().get("BODY")
+if body:
+    R["verts"] = len(body.data.vertices)
+    R["tris"] = sum(len(p.vertices) - 2 for p in body.data.polygons)
+if os.path.exists(GLB):
+    R["glb_bytes"] = os.path.getsize(GLB)
+    R["glb"] = GLB
 print("JOB_RESULT " + json.dumps(R), flush=True)
+if any(not s["ok"] for s in R["steps"]):
+    print("JOB_FAILED — nonzero exit", flush=True)
+    sys.exit(1)

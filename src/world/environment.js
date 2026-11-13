@@ -261,6 +261,25 @@ export function createEnvironment(scene, renderer) {
     return next;
   }
 
+  // ---------------- DAY-NIGHT CYCLE (user demand) ----------------
+  // din -> shaam (golden hour) -> raat -> subah ... har phase cycleLen sec.
+  const CYCLE_ORDER = ['day', 'dusk', 'night', 'overcast'];
+  const PHASE_START = { day: 9.5, dusk: 16.5, night: 19.0, overcast: 5.5 };
+  const PHASE_SPAN = { day: 7.0, dusk: 2.5, night: 10.5, overcast: 4.0 }; // ghante
+  state.cycling = false;
+  state.cycleT = 0;
+  state.cycleLen = 150;                       // 2.5 min / phase => 10min poora din
+  function startCycle(secPerPhase) {
+    if (secPerPhase > 0) state.cycleLen = secPerPhase;
+    state.cycling = true;
+  }
+  function clockString() {
+    const t = Math.min(1, state.cycleT / state.cycleLen);
+    let h = (PHASE_START[state.timeName] + t * PHASE_SPAN[state.timeName]) % 24;
+    const hh = Math.floor(h), mm = Math.floor((h - hh) * 60);
+    return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+  }
+
   function setRain(on) {
     state.raining = on;
     rain.visible = true; // opacity fades in/out
@@ -321,6 +340,16 @@ export function createEnvironment(scene, renderer) {
   // ---------------- per-frame update ----------------
   function update(dt, camera) {
     skyUniforms.uTime.value += dt; // cloud drift
+    // day-night cycle auto-advance
+    if (state.cycling) {
+      state.cycleT += dt;
+      if (state.cycleT >= state.cycleLen) {
+        state.cycleT = 0;
+        const i = CYCLE_ORDER.indexOf(state.timeName);
+        const next = CYCLE_ORDER[(i + 1) % CYCLE_ORDER.length];
+        if (next !== state.timeName) setTime(next);
+      }
+    }
     // sun flare: follow the sun, fade by view alignment (golden hour only)
     flare.position.copy(sun.position).multiplyScalar(3.2);
     camera.getWorldDirection(camDir);
@@ -365,7 +394,8 @@ export function createEnvironment(scene, renderer) {
 
   return {
     scene, sun, state, update, setTime, cycleTime, setRain, toggleRain, setPerf,
-    get raining() { return state.raining; },
+    startCycle, clockString,
+    get cycling() { return state.cycling; },
     get timeName() { return state.timeName; },
     get rainAmount() { return state.rainAmount; },
     get lampIntensity() { return state.lampIntensity; },

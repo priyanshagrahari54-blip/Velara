@@ -160,7 +160,7 @@ def build():
                    math.sin(a) * rad * rz * 0.8,
                     cy + (rng.random() - 0.45) * ry * 0.9)
             br_ = rx * (0.42 + 0.20 * rng.random())
-            bpy.ops.mesh.primitive_icosphere_add(subdivisions=sub, radius=br_,
+            bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=sub, radius=br_,
                                                  location=off)
             blob = bpy.context.active_object
             blob.name = f"Canopy{bi}"
@@ -306,14 +306,24 @@ def export_glb():
 
 
 # ---------------------------------------------------------------- main
-build()
-vertex_color()
-preview()
-export_glb()
+# blender --python exception par exit-0 de sakta hai — workflow galat "done"
+# mark kar deta tha. Isliye: try/except + failure par sys.exit(1).
+try:
+    build()
+    vertex_color()
+    preview()
+    export_glb()
+except Exception:
+    traceback.print_exc()
 
-obj = globals()["FOL"]
-R["verts"] = len(obj.data.vertices)
-R["tris"] = sum(len(p.vertices) - 2 for p in obj.data.polygons)
-R["glb_bytes"] = os.path.getsize(GLB)
-R["glb"] = GLB
+obj = globals().get("FOL")
+if obj:
+    R["verts"] = len(obj.data.vertices)
+    R["tris"] = sum(len(p.vertices) - 2 for p in obj.data.polygons)
+if os.path.exists(GLB):
+    R["glb_bytes"] = os.path.getsize(GLB)
+    R["glb"] = GLB
 print("JOB_RESULT " + json.dumps(R), flush=True)
+if any(not s["ok"] for s in R["steps"]):
+    print("JOB_FAILED — nonzero exit", flush=True)
+    sys.exit(1)

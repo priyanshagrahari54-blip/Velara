@@ -9,6 +9,7 @@ import { CameraRig } from '../engine/camera.js';
 
 import { createEnvironment } from '../world/environment.js';
 import { buildCity, EXTENT } from '../world/city.js';
+import { createFoliage } from '../world/foliage.js';
 import { TrafficSystem } from '../world/traffic.js';
 import { PedestrianSystem } from '../world/pedestrians.js';
 
@@ -87,8 +88,16 @@ export class VelaraGame {
 
     // -------------------------------------------------------- world
     this.env = createEnvironment(this.scene, this.renderer);
-    this.env.setTime('overcast'); // boot into S3 OVERCAST MOODY with a cinematic 2.5s transition
+    // GOLDEN HOUR boot (user-picked Style B) + auto day-night cycle:
+    // dusk -> night -> overcast(subah) -> day -> dusk ... (2.5min/phase)
+    this.env.setTime('dusk');
+    this.env.startCycle(150);
     this.city = buildCity(this.scene, this.world, { profile: this.profile });
+    // FULL GREEN CITY (user demand): factory-designed trees/bushes/grass,
+    // instanced — low tiers par density aadhi + shadows off
+    createFoliage(this.scene, {
+      lowTier: this.quality.config.pixelRatio <= 0.55,
+    });
     this.player = new Player(this.scene, this.world, this.city.groundMat, PLAYER_SPAWN);
     this.world.addContactMaterial(new CANNON.ContactMaterial(
       this.player.physMat, this.city.groundMat, { friction: 0.0, restitution: 0.0 }));
@@ -230,6 +239,15 @@ export class VelaraGame {
   }
 
   onResize() { this._resize(); }
+
+  // HUD clock (1s cadence) — day-night cycle ka time dikhata hai
+  _hudClock(dt) {
+    this._clockT = (this._clockT || 0) + dt;
+    if (this._clockT < 1) return;
+    this._clockT = 0;
+    const phase = { day: 'DIN', dusk: 'SHAAM', night: 'RAAT', overcast: 'SUBAH' }[this.env.timeName] || '';
+    this.ui.setClock(this.env.clockString(), phase);
+  }
 
   // ============================================================ actions
   _action(name) {
@@ -595,6 +613,7 @@ export class VelaraGame {
         v.update(dt, { throttle: 0, steer: 0, handbrake: true, parked: true }, this.env);
       }
       this.ui.setSpeed(0, '—');
+      this._hudClock(dt);
 
       const near = this.nearestVehicle();
       let promptTxt = null;
@@ -618,6 +637,7 @@ export class VelaraGame {
         }
       }
       this.ui.setSpeed(res.kmh, this.activeVehicle.getGear());
+      this._hudClock(dt);
       this.ui.prompt(null);
       const anyWheel = this.activeVehicle.vehicle.wheelInfos.some((w) => w.isInContact);
       if (res.kmh < 3 && (!anyWheel || this.activeVehicle.isFlipped())) {
