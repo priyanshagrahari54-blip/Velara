@@ -5,8 +5,9 @@
   "pico-s"
  ],
  "brief": "pico-s v2 REBAKE-FREE \u2014 paint material + vertex-AO (black-texture bug fix)",
- "status": "pending",
+ "status": "done",
  "priority": 1,
  "result": "factory/out/pico-s.glb",
- "worker": null
+ "worker": "actions-cpu",
+ "claimed": 1794581505
 }

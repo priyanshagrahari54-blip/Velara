@@ -5,8 +5,9 @@
   "grass-tuft"
  ],
  "brief": "Grass tuft 16 blades, tip-bright gradient",
- "status": "pending",
+ "status": "done",
  "priority": 1,
  "result": "factory/out/grass-tuft.glb",
- "worker": null
+ "worker": "actions-cpu",
+ "claimed": 1794581505
 }

@@ -5,8 +5,9 @@
   "bush"
  ],
  "brief": "Street bush mound ~1m",
- "status": "pending",
+ "status": "done",
  "priority": 1,
  "result": "factory/out/bush.glb",
- "worker": null
+ "worker": "actions-cpu",
+ "claimed": 1794581505
 }
