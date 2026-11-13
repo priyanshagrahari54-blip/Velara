@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { getSkidMarks } from './skidmarks.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 // designed-model loader (factory assets: velara-gt/titan-rs/... Draco GLBs)
@@ -174,10 +175,75 @@ export class GameVehicle {
     this.steerCurrent = 0;
     this.driftAmount = 0;
 
+    // ---------------------------------------- DAMAGE (remaster: GTA5-jaisa)
+    this.damage = 0;            // 0..100
+    this.onCrash = null;        // game hook: (severity, otherBody)
+    this._skid = null;          // lazy SkidMarks
+    this._misfireT = 0;
+    this.body.addEventListener('collide', (e) => {
+      const imp = Math.abs(e.contact.getImpactVelocityAlongNormal());
+      if (imp < 3.4) return;
+      const sev = Math.min(26, (imp - 3.4) * 2.1);
+      this.damage = Math.min(100, this.damage + sev);
+      // contact world point + normal
+      const c = e.contact;
+      const isBi = c.bi === this.body;
+      const src = isBi ? c.bi : c.bj;
+      const r = isBi ? c.ri : c.rj;
+      const wp = new THREE.Vector3(src.position.x + r.x, src.position.y + r.y, src.position.z + r.z);
+      const wn = new THREE.Vector3(c.ni.x, c.ni.y, c.ni.z);
+      if (!isBi) wn.negate();
+      this._dent(wp, wn, sev);
+      if (this.onCrash) this.onCrash(sev, isBi ? c.bj : c.bi);
+    });
+
     // ---------------------------------------- designed model (factory GLB)
     this.glbModel = null;
     this.glbWheels = null;
     this.glbTail = null;
+    this.barMats = null;        // police lightbar: {blue, red}
+  }
+
+  /** REMASTER: progressive dent — impact point ke aas-paas vertices andar. */
+  _dent(wp, wn, sev) {
+    const depth = Math.min(0.17, 0.025 + sev * 0.005);
+    const targets = [];
+    if (this.glbModel && this.glbModel !== false) {
+      this.glbModel.traverse((o) => { if (o.isMesh && o.name === 'Body') targets.push(o); });
+    }
+    if (!targets.length) {
+      for (const c of this.group.children) {
+        if (c.isMesh && c.geometry && c.geometry.attributes.position) targets.push(c);
+      }
+    }
+    const q = new THREE.Quaternion();
+    for (const m of targets) this._dentMesh(m, wp, depth);
+  }
+
+  _dentMesh(m, wp, depth) {
+    m.updateMatrixWorld(true);
+    const lp = m.worldToLocal(wp.clone());
+    const pos = m.geometry.attributes.position;
+    if (!pos || pos.itemSize < 3) return;
+    const R = 0.55, R2 = R * R;
+    // dent direction: contact point se car-center (local origin) ki taraf
+    const cx = -lp.x, cy = -Math.max(0.2, lp.y) * 0.5, cz = -lp.z;
+    const cl = Math.hypot(cx, cy, cz) || 1;
+    const dx = cx / cl, dy = cy / cl, dz = cz / cl;
+    let touched = false;
+    for (let i = 0; i < pos.count; i++) {
+      const vx = pos.getX(i) - lp.x, vy = pos.getY(i) - lp.y, vz = pos.getZ(i) - lp.z;
+      const d2 = vx * vx + vy * vy + vz * vz;
+      if (d2 > R2) continue;
+      const f = 1 - Math.sqrt(d2) / R;
+      const k = depth * f * f;
+      pos.setXYZ(i, pos.getX(i) + dx * k, pos.getY(i) + dy * k, pos.getZ(i) + dz * k);
+      touched = true;
+    }
+    if (touched) {
+      pos.needsUpdate = true;
+      m.geometry.computeVertexNormals();
+    }
   }
 
   /** Designed GLB load (ek baar) — procedural body/wheels chhup jaate hain. */
@@ -188,15 +254,22 @@ export class GameVehicle {
       const m = gltf.scene;
       const wheels = [];
       let tail = null;
+      const bars = {};
       m.traverse((o) => {
         if (o.isMesh) {
           o.castShadow = true;
           o.receiveShadow = false;
+          const mm = Array.isArray(o.material) ? o.material : [o.material];
+          for (const x of mm) {
+            if (x && x.name === 'BarBlue') bars.blue = x;
+            if (x && x.name === 'BarRed') bars.red = x;
+          }
         }
         if (o.name === 'WheelFL' || o.name === 'WheelFR'
             || o.name === 'WheelRL' || o.name === 'WheelRR') wheels.push(o);
         if (o.name === 'LightRear') tail = o;
       });
+      if (bars.blue || bars.red) this.barMats = bars;
       this.group.add(m);
       // BUGFIX (mobile-QA confirmed): GLB wheels group ke ANDAR nested the, par
       // update() unhe WORLD transform se sync karta hai → double-apply → tyres
@@ -444,13 +517,24 @@ export class GameVehicle {
     this.throttleCurrent += (input.throttle - this.throttleCurrent) * Math.min(1, dt * tRate);
     const throttle = this.throttleCurrent;
 
-    // throttle / brake / reverse — per-vehicle speed limiter (ADR-005/006)
+    // throttle / brake / reverse — REMASTER: real torque curve (hard governor
+    // khatam — power naturally taper hota hai top ke paas, GTA-jaisa feel)
     const fs = this.getForwardSpeed();
     let engine = 0, brake = 0;
-    const governed = fs * 3.6 > P.topKmh;
+    const topMs = P.topKmh / 3.6;
+    const rpm = Math.min(1.15, Math.abs(fs) / topMs);
+    const powerCurve = Math.max(0.22, 1.06 - 0.66 * Math.pow(rpm, 1.7));
+    // damage: 55% ke baad power loss, 88%+ par misfire
+    const dmgK = this.damage > 55 ? 1 - ((this.damage - 55) / 45) * 0.45 : 1;
+    let misfire = 1;
+    if (this.damage > 88) {
+      this._misfireT -= dt;
+      if (this._misfireT <= 0) { this._misfireT = 0.4 + Math.random() * 0.8; this._misfireHit = Math.random() < 0.5; }
+      if (this._misfireHit) misfire = 0.25;
+    }
     if (throttle > 0.02) {
       if (fs < -1.2) brake = P.brake;
-      else engine = governed ? 0 : P.engine * throttle;
+      else engine = P.engine * throttle * powerCurve * dmgK * misfire;
     } else if (throttle < -0.02) {
       if (fs > 1.2) brake = P.brake * 0.9;
       else engine = P.reverse * throttle; // negative => reverse
@@ -481,6 +565,15 @@ export class GameVehicle {
       this.body.applyForce(new CANNON.Vec3(0, f, 0));
     }
 
+    // REMASTER: weight transfer — brake dive / throttle squat (suspension feel)
+    {
+      const accelFs = (engine !== 0 ? Math.sign(engine) : 0) - (brake > 6 && Math.abs(fs) > 2 ? Math.sign(fs) : 0);
+      if (accelFs !== 0) {
+        const k = 420 * massK;
+        this.body.applyTorque(new CANNON.Vec3(accelFs * k, 0, 0));
+      }
+    }
+
     // arcade self-righting when tipped over at low speed
     this._up = this._up || new THREE.Vector3();
     this._up.set(0, 1, 0).applyQuaternion(this.group.quaternion);
@@ -506,15 +599,47 @@ export class GameVehicle {
     const drifting = latSpeed > 3.4 && Math.abs(along) > 4;
     this.driftAmount = drifting ? Math.min(1, latSpeed / 10) : Math.max(0, this.driftAmount - dt * 3);
 
-    // tire smoke
+    // REMASTER: per-wheel slip (cannon skidInfo: 1 = full grip) → SKIDMARKS +
+    // tyre smoke + slip level (audio/game ke liye)
+    let slipLevel = 0;
+    if (!this._skid) this._skid = getSkidMarks(this.scene);
+    const carYaw = Math.atan2(2 * (this.body.quaternion.w * this.body.quaternion.y
+      + this.body.quaternion.x * this.body.quaternion.z),
+      1 - 2 * (this.body.quaternion.y * this.body.quaternion.y
+      + this.body.quaternion.x * this.body.quaternion.x));
     this.smokeTimer -= dt;
-    if ((drifting || (handbrake && kmh > 12)) && this.smokeTimer <= 0) {
-      this.smokeTimer = 0.016;
+    let smokeDue = false;
+    for (let wi = 0; wi < 4; wi++) {
+      const sk = v.wheelInfos[wi].skidInfo;
+      const slipping = sk < 0.82 && kmh > 9;
+      if (slipping) {
+        slipLevel = Math.max(slipLevel, 1 - sk);
+        v.updateWheelTransform(wi);
+        const wt = v.wheelInfos[wi].worldTransform;
+        this._skid.add(wt.position.x, wt.position.y - P.wheelR + 0.02, wt.position.z,
+          carYaw, Math.min(1, (0.82 - sk) * 4));
+        smokeDue = true;
+      }
+    }
+    if ((drifting || (handbrake && kmh > 12) || smokeDue) && this.smokeTimer <= 0) {
+      this.smokeTimer = 0.02;
       for (const wi of [2, 3]) {
         v.updateWheelTransform(wi);
         const wt = v.wheelInfos[wi].worldTransform;
         this.spawnSmoke(wt.position.x, wt.position.y + 0.15, wt.position.z,
           drifting ? this.driftAmount : 0.5);
+      }
+    }
+
+    // REMASTER: engine damage smoke (hood se — heavy damage par)
+    if (this.damage > 72) {
+      this._dmgSmokeT = (this._dmgSmokeT || 0) - dt;
+      if (this._dmgSmokeT <= 0) {
+        this._dmgSmokeT = 0.07;
+        const front = this.getForwardVector(new THREE.Vector3())
+          .multiplyScalar(P.length * 0.32).add(this.group.position);
+        this.spawnSmoke(front.x, front.y + 0.75, front.z,
+          Math.min(1, (this.damage - 72) / 28));
       }
     }
 
@@ -545,9 +670,18 @@ export class GameVehicle {
     const day = env.timeName === 'day';
     for (const s of this.spots) s.intensity = day ? 12 : this.preset.spotI;
 
-    this._updateSmoke(dt);
+    // REMASTER: police lightbar flash (BarBlue/BarRed alternate strobe)
+    if (this.barMats) {
+      const t = (this._barT = (this._barT || 0) + dt) * 9;
+      const a = Math.sin(t) > 0;
+      if (this.barMats.blue) this.barMats.blue.emissiveIntensity = a ? 7 : 0.35;
+      if (this.barMats.red) this.barMats.red.emissiveIntensity = a ? 0.35 : 7;
+    }
 
-    return { drifting, kmh, brake, engine };
+    this._updateSmoke(dt);
+    if (this._skid) this._skid.update(dt);
+
+    return { drifting, kmh, brake, engine, damage: this.damage, slipLevel };
   }
 }
 

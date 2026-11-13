@@ -15,6 +15,8 @@ import { PedestrianSystem } from '../world/pedestrians.js';
 
 import { Player } from '../gameplay/player.js';
 import { GameVehicle, VEHICLE_PRESETS, getVehiclePhysMat } from '../gameplay/vehicle.js';
+import { PoliceSystem } from '../gameplay/police.js';
+import { spawnStreetProps } from '../gameplay/props.js';
 import { WeaponManager, WEAPONS } from '../gameplay/weapons.js';
 import { buildRange } from '../gameplay/range.js';
 import { MissionManager } from '../gameplay/missions.js';
@@ -105,8 +107,16 @@ export class VelaraGame {
     this.vehicles = VEHICLE_SPAWNS.map((s) => {
       const v = new GameVehicle(this.scene, this.world, s, VEHICLE_PRESETS[s.p]);
       v.reset(s.x, s.z, s.yaw);
+      // REMASTER: crash hook — police crime + camera shake + ka-hein audio feel
+      v.onCrash = (sev, other) => this._onVehicleCrash(v, sev, other);
       return v;
     });
+    // REMASTER: police (wanted/chase/BUSTED) + knockable street props
+    this.police = new PoliceSystem(this.scene, this.world, this);
+    this.police.onWanted = (n) => this.ui.setWanted(n);
+    this.police.onBusted = () => this._busted();
+    this.streetProps = spawnStreetProps(this.scene, this.world);
+    this._shotsRead = 0;
     // designed GLB models: qa/tests skip (logic-only), g560 sirf active, normal staggered
     if (!this.qaMode && this.profile !== 'g560') {
       this.vehicles.forEach((v, i) => setTimeout(() => v.ensureGLB(), 400 + i * 600));
@@ -238,6 +248,38 @@ export class VelaraGame {
   }
 
   onResize() { this._resize(); }
+
+  // REMASTER: vehicle crash → camera shake + police crimes
+  _onVehicleCrash(v, sev, other) {
+    if (sev < 4) return;
+    this.cameraRig.addShake(Math.min(0.65, sev * 0.03));
+    if (v !== this.activeVehicle) return;   // sirf player wali gaadi ke crimes
+    const kmh = v.getSpeedKmh();
+    if (other && other.gameTag === 'police') this.police.reportCrime(2);
+    else if (other && other.gameTag === 'traffic' && kmh > 18) this.police.reportCrime(1);
+  }
+
+  // REMASTER: police ne pakad liya — BUSTED overlay + fine + respawn
+  _busted() {
+    if (this._bustedLock) return;
+    this._bustedLock = true;
+    this.ui.showBusted(true);
+    this.audio.setEngine(0, 0, false);
+    this.audio.setSkid(0);
+    this.audio.horn(false);
+    this.weapons.setTrigger(false);
+    this.money = Math.max(0, (this.money || 0) - 300);
+    this.ui.setMoney(this.money);
+    setTimeout(() => {
+      this.ui.showBusted(false);
+      this.police.clear();
+      if (this.mode === 'car') this.toggleCar();   // gaadi chhod do
+      this.player.body.position.set(PLAYER_SPAWN.x, PLAYER_SPAWN.y + 0.6, PLAYER_SPAWN.z);
+      this.player.body.velocity.setZero();
+      this.player.body.angularVelocity.setZero();
+      this._bustedLock = false;
+    }, 2600);
+  }
 
   // HUD clock (1s cadence) — day-night cycle ka time dikhata hai
   _hudClock(dt) {
@@ -612,6 +654,8 @@ export class VelaraGame {
         v.update(dt, { throttle: 0, steer: 0, handbrake: true, parked: true }, this.env);
       }
       this.ui.setSpeed(0, '—');
+      this.ui.setCarDamage(null);
+      this.audio.setSkid(0);
       this._hudClock(dt);
 
       const near = this.nearestVehicle();
@@ -636,6 +680,8 @@ export class VelaraGame {
         }
       }
       this.ui.setSpeed(res.kmh, this.activeVehicle.getGear());
+      this.ui.setCarDamage(res.damage);
+      this.audio.setSkid(res.slipLevel > 0.18 ? Math.min(1, res.slipLevel * 1.6) : 0);
       this._hudClock(dt);
       this.ui.prompt(null);
       const anyWheel = this.activeVehicle.vehicle.wheelInfos.some((w) => w.isInContact);
@@ -703,6 +749,19 @@ export class VelaraGame {
 
     // -------------------------------------------------------- environment
     this.env.update(dt, this.camera);
+
+    // REMASTER: police pursuit + knockable props + shot-crime detection
+    this.police.update(dt, this.player, this.activeVehicle, this.env, this.mode);
+    this.streetProps.update();
+    {
+      const fired = this.weapons.shotsFired || 0;
+      if (fired > this._shotsRead) {
+        this._shotsRead = fired;
+        const p = this.player.position;
+        const inRange = Math.hypot(p.x - 104, p.z) < 42;   // shooting range zone
+        if (!inRange) this.police.reportCrime(1);
+      }
+    }
     const worldFocus = this.activeVehicle
       ? this.activeVehicle.body.position
       : this.player.position;

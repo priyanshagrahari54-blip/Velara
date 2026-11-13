@@ -117,7 +117,7 @@ def setup_cycles(samples):
 
 
 # ================================================================ 1. MODEL (v2)
-NS, MR = 46, 24          # body stations x ring points
+NS, MR = 64, 36          # body stations x ring points (REMASTER hi-detail)
 PROFILES = {
     "sports": dict(
         belt=[(0.0, 0.93), (0.10, 0.97), (0.30, 1.0), (0.55, 1.01), (0.70, 0.86),
@@ -314,7 +314,7 @@ def build():
         if u < 0.04:
             wHalf *= 1.0 - (0.04 - u) / 0.04 * 0.45
         body_st.append((y, wHalf, botZ, topZ, e, prof["tumble"]))
-    body = loft("Body", paint, body_st, subsurf=1)
+    body = loft("Body", paint, body_st, subsurf=2)
 
     # ---------------- glass canopy (panorama) ----------------
     cLen = P["cabinLen"]
@@ -331,7 +331,7 @@ def build():
         botZ = beltZ - 0.05
         wHalf = (W / 2) * curve(u, prof["plan"]) * 0.82
         cab_st.append((y, wHalf, botZ, topZ, 2.3, 0.70))
-    canopy = loft("Glass", glass, cab_st, subsurf=1)
+    canopy = loft("Glass", glass, cab_st, subsurf=2)
 
     paint_parts, trim_parts, glass_parts, lf_parts, lr_parts = [body], [], [canopy], [], []
 

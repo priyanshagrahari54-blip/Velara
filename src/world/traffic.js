@@ -100,6 +100,7 @@ export class TrafficSystem {
         collisionFilterGroup: 8,      // traffic group
         collisionFilterMask: 1 | 2,   // statics + player + hero car, NOT other traffic
       });
+      body.gameTag = 'traffic';       // police crime detection
       const x = axis === 'z' ? road + lane : (Math.random() - 0.5) * 2 * EXTENT;
       const z = axis === 'z' ? (Math.random() - 0.5) * 2 * EXTENT : road - lane;
       body.position.set(x, 0.85, z);

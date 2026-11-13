@@ -398,6 +398,64 @@ export class UI {
     this.clockEl.textContent = `${time}  ·  ${phase}`;
   }
 
+  // WANTED stars (police system) — top-right, money ke neeche
+  setWanted(n) {
+    if (!this.wantedEl) {
+      this.wantedEl = document.createElement('div');
+      this.wantedEl.id = 'v-wanted';
+      this.wantedEl.style.cssText = `position:fixed;top:calc(38px + env(safe-area-inset-top));right:12px;
+        font:700 17px/1 system-ui,sans-serif;letter-spacing:3px;color:#ffd257;
+        text-shadow:0 1px 3px rgba(0,0,0,0.8);z-index:30;pointer-events:none;
+        transition:opacity .3s`;
+      document.body.appendChild(this.wantedEl);
+    }
+    this.wantedEl.textContent = n > 0 ? '★'.repeat(n) : '';
+    this.wantedEl.style.opacity = n > 0 ? 1 : 0;
+  }
+
+  // car damage bar (speedo ke neeche — car mode)
+  setCarDamage(pct) {
+    if (pct === null || pct === undefined) {
+      if (this.dmgEl) this.dmgEl.style.opacity = 0;
+      return;
+    }
+    if (!this.dmgEl) {
+      this.dmgEl = document.createElement('div');
+      this.dmgEl.id = 'v-cardmg';
+      this.dmgEl.style.cssText = `position:fixed;bottom:calc(64px + env(safe-area-inset-bottom));left:50%;
+        transform:translateX(-50%);width:120px;height:5px;border-radius:3px;
+        background:rgba(10,14,20,0.6);z-index:30;pointer-events:none;overflow:hidden`;
+      const fill = document.createElement('div');
+      fill.style.cssText = `height:100%;width:0%;border-radius:3px;transition:width .25s`;
+      this.dmgEl.appendChild(fill);
+      this.dmgFill = fill;
+      document.body.appendChild(this.dmgEl);
+    }
+    this.dmgEl.style.opacity = pct > 2 ? 1 : 0;
+    const p = Math.max(0, Math.min(100, pct));
+    this.dmgFill.style.width = p + '%';
+    this.dmgFill.style.background = p > 70 ? 'linear-gradient(90deg,#e04040,#ff8a5c)'
+      : p > 40 ? 'linear-gradient(90deg,#e0a840,#ffd257)' : 'linear-gradient(90deg,#54e08a,#a8f5c0)';
+  }
+
+  // BUSTED overlay (police ne pakad liya)
+  showBusted(show) {
+    if (show && !this.bustedEl) {
+      this.bustedEl = document.createElement('div');
+      this.bustedEl.id = 'v-busted';
+      this.bustedEl.style.cssText = `position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+        background:radial-gradient(ellipse at center,rgba(20,26,40,0.55),rgba(6,8,14,0.9));
+        z-index:90;pointer-events:none`;
+      this.bustedEl.innerHTML = `<div style="text-align:center">
+        <div style="font:800 54px/1.1 system-ui,sans-serif;color:#ff4455;letter-spacing:6px;
+          text-shadow:0 4px 24px rgba(255,40,60,0.45)">BUSTED</div>
+        <div style="font:500 14px/1.6 system-ui,sans-serif;color:#aeb8c8;letter-spacing:2px;margin-top:10px">
+          FINE ₹300 · stars clear</div></div>`;
+      document.body.appendChild(this.bustedEl);
+    }
+    if (this.bustedEl) this.bustedEl.style.display = show ? 'flex' : 'none';
+  }
+
   setHealth(pct) {
     this.healthEl.style.width = Math.max(0, Math.min(100, pct)) + '%';
     this.healthEl.style.background = pct > 50

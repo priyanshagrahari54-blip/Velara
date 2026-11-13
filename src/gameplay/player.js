@@ -164,7 +164,9 @@ export class Player {
 
     const vel = this.body.velocity;
     if (this.grounded) {
-      const k = Math.min(1, dt * 14);
+      // REMASTER: momentum feel — accel derawar (8), rukne par halka slide (4.5)
+      const moving = len > 0.01;
+      const k = Math.min(1, dt * (moving ? 8 : 4.5));
       vel.x += (vx - vel.x) * k;
       vel.z += (vz - vel.z) * k;
       if (input.jump) {

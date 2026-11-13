@@ -369,6 +369,7 @@ export class WeaponManager {
       return false;
     }
     a.mag--;
+    this.shotsFired = (this.shotsFired || 0) + 1;   // police crime detection
     this.fireTimer = 60 / w.rpm;
     this.bloom = Math.min(w.bloomMax, this.bloom + w.bloomPerShot);
     this.audio.shot(w.sfx);
