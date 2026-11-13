@@ -43,3 +43,31 @@
 2. **"Tech-veh" Claude prompt** — user se dobara chahiye (paste karwana hai).
 3. Movement further tuning — real-device feedback ke baad (camera, grip curves).
 4. Icon AI-refs (5-6 options) — user pick kare.
+
+---
+
+## v0.3.2 — LOFTED v2 cars + cinematic grade (commit 7291e3b)
+
+**Kya badla:** 5 vehicles ab REAL lofted surfaces hain (46 stations × 24-point superellipse
+rings, wheel-arch carve, glass canopy, splitter/diffuser/lightbar/detail-kit) — bevel-box
+khatam. In-game cinematic grade pass (contrast, split-tone, vignette, film-grain).
+
+| Check | Result |
+|---|---|
+| Mobile QA | **11/11 PASS**, console errors 0 |
+| Physics (gas/steer, game-time) | 33 kmh / 1.74 rad — PASS |
+| Fire (tracer+flash+muzzle) | PASS (deterministic sampling) |
+| CI Build+Smoke | SUCCESS |
+| apk workflow | SUCCESS (5,362,999 B) |
+| Heavy Parallel QA | SUCCESS |
+
+**Is round ke fixes (QA ne pakde):**
+1. Composer low-tier crawl — render-target ab drawing-buffer size par banta hai (pehle
+   CSS size → emergency tier 4× overdraw).
+2. VFX spawn-opacity — muzzle/impact/tracer ab spawn par hi opacity reset karte hain
+   (pehle next-tick par set hoti thi → pehla frame invisible).
+3. QA deterministic — physics/fire assertions ab game-time stepping se (SwiftShader
+   rAF-jitter se immune).
+
+**Known:** v2 GLB ~88KB/car (subsurf-1 export + HIGH-baked normals). Studio previews:
+`factory/out/<car>_studio.png`.
