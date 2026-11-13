@@ -857,6 +857,7 @@ export function buildCity(scene, world, opts = {}) {
     color: 0x33363c, emissive: 0xffd9a0, emissiveIntensity: 2.2, roughness: 0.5,
   });
   const lampLights = [];
+  const lampGlowPos = [];
   let lampIndex = 0;
   function addLamp(x, z, dirX, dirZ) {
     // 60fps: lamp group nahi — parts seedha chunk bucket mein merge
@@ -873,6 +874,7 @@ export function buildCity(scene, world, opts = {}) {
     put(new THREE.CylinderGeometry(0.07, 0.07, 1.8, 6), poleMat,
       x + Math.cos(ay) * 0.9, 5.5, z - Math.sin(ay) * 0.9, ay, Math.PI / 2, false);
     put(new THREE.BoxGeometry(0.66, 0.2, 0.3), lampHeadMat, x + dirX * 1.7, 5.45, z + dirZ * 1.7, 0, 0, false);
+    lampGlowPos.push(x + dirX * 1.7, 5.45, z + dirZ * 1.7);
     staticBox(0.14, 2.8, 0.14, x, 2.8, z);
     if (lampIndex % 3 === 0) {
       const l = new THREE.PointLight(0xffd9a0, 40, 42, 1.8);
@@ -894,6 +896,32 @@ export function buildCity(scene, world, opts = {}) {
       const x = -EXTENT + 26 + k * (CELL) + CELL / 2;
       const side = (k % 2 === 0) ? 1 : -1;
       addLamp(x, rz + side * (ROAD / 2 + 1.2), 0, -side);
+    }
+  }
+
+  // --------------------------------------------- lamp GLOW (sab lamps = 1 draw!)
+  // bloom-off tiers (g560/low) par bhi lamps glow karein — additive Points sprite
+  {
+    const n = lampGlowPos.length / 3;
+    if (n > 0) {
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(lampGlowPos, 3));
+      const cnv = document.createElement('canvas');
+      cnv.width = cnv.height = 64;
+      const c2 = cnv.getContext('2d');
+      const grd = c2.createRadialGradient(32, 32, 2, 32, 32, 32);
+      grd.addColorStop(0, 'rgba(255,216,164,0.95)');
+      grd.addColorStop(0.35, 'rgba(255,190,110,0.30)');
+      grd.addColorStop(1, 'rgba(255,170,80,0)');
+      c2.fillStyle = grd;
+      c2.fillRect(0, 0, 64, 64);
+      const tex = new THREE.CanvasTexture(cnv);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      const gmat = new THREE.PointsMaterial({
+        map: tex, size: 7.5, sizeAttenuation: true, transparent: true,
+        depthWrite: false, blending: THREE.AdditiveBlending,
+      });
+      scene.add(new THREE.Points(geo, gmat));
     }
   }
 

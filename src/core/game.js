@@ -29,6 +29,7 @@ const VEHICLE_SPAWNS = [
   { p: 'muscle', x: -11, y: 1.15, z: 10, yaw: 2.6 },
   { p: 'hatch', x: 12, y: 1.15, z: -8, yaw: -0.4 },
   { p: 'van', x: -9, y: 1.15, z: -11, yaw: 0.3 },
+  { p: 'police', x: 16, y: 1.15, z: 6, yaw: -1.2 },
 ];
 
 export class VelaraGame {
@@ -52,6 +53,7 @@ export class VelaraGame {
 
     // hardware profile (?profile=g560 - Lenovo G560 2GB aggressive tier)
     this.profile = new URLSearchParams(location.search).get('profile') || 'normal';
+    this.qaMode = new URLSearchParams(location.search).has('qa');
 
     // ------------------------------------------------------- engine layer
     try {
@@ -97,6 +99,10 @@ export class VelaraGame {
       v.reset(s.x, s.z, s.yaw);
       return v;
     });
+    // designed GLB models: qa/tests skip (logic-only), g560 sirf active, normal staggered
+    if (!this.qaMode && this.profile !== 'g560') {
+      this.vehicles.forEach((v, i) => setTimeout(() => v.ensureGLB(), 400 + i * 600));
+    }
     this.activeVehicle = this.vehicles[0];
     // only the ACTIVE vehicle's headlight spots render — 8 live spotlights
     // would explode the shader cost (SwiftShader OOM in smoke test)
@@ -273,6 +279,8 @@ export class VelaraGame {
   setAimOverride(v) { this._aimOverride = !!v; }
 
   _applyActiveVehicle() {
+    // g560: active gaadi ka hi GLB load hota hai (draw budget ka bachav)
+    if (this.profile === 'g560' && this.activeVehicle) this.activeVehicle.ensureGLB();
     for (const v of this.vehicles) {
       const on = v === this.activeVehicle;
       for (const s of v.spots) s.visible = on;

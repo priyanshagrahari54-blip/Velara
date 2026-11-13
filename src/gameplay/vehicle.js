@@ -1,5 +1,20 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+
+// designed-model loader (factory assets: velara-gt/titan-rs/... Draco GLBs)
+let _loader = null;
+function designedLoader() {
+  if (!_loader) {
+    const draco = new DRACOLoader();
+    draco.setDecoderPath('draco/');
+
+    _loader = new GLTFLoader();
+    _loader.setDRACOLoader(draco);
+  }
+  return _loader;
+}
 
 // ---------------------------------------------------------------------------
 // VELARA vehicles: raycast-vehicle physics + procedural mesh + lights + smoke.
@@ -9,8 +24,18 @@ import * as CANNON from 'cannon-es';
 
 // Presets: each vehicle must FEEL different in 10 seconds of driving.
 export const VEHICLE_PRESETS = {
+  police: {
+    id: 'police', name: 'Police Interceptor', shape: 'muscle',
+    desc: 'Chase machine — lightbar ke saath',
+    glb: 'assets/vehicles/police.glb',
+    paint: 0xe8eaee, glow: 0x35e0ff, tail: 0xff2233,
+    mass: 1300, engine: 5000, reverse: 2200, brake: 36, steer: 0.52, topKmh: 195,
+    slip: 2.8, wheelR: 0.34, width: 1.92, length: 4.9, cabinL: 1.95, cabinH: 0.62,
+    horn: [392, 494], spotI: 90,
+  },
   coupe: {
-    id: 'coupe', name: 'Velara GT', shape: 'coupe',
+    id: 'coupe',
+    glb: 'assets/vehicles/velara-gt.glb', name: 'Velara GT', shape: 'coupe',
     desc: 'Drift king — balanced and playful',
     paint: 0x10151d, glow: 0xff2fd8, tail: 0xff2233,
     mass: 950, engine: 4200, reverse: 2100, brake: 32, steer: 0.55, topKmh: 185,
@@ -18,7 +43,8 @@ export const VEHICLE_PRESETS = {
     horn: [392, 494], spotI: 85,
   },
   muscle: {
-    id: 'muscle', name: 'Titan RS', shape: 'muscle',
+    id: 'muscle',
+    glb: 'assets/vehicles/titan-rs.glb', name: 'Titan RS', shape: 'muscle',
     desc: 'Heavy muscle — brutal straight-line power',
     paint: 0x571016, glow: 0xff7a00, tail: 0xff3311,
     mass: 1250, engine: 5600, reverse: 2400, brake: 36, steer: 0.5, topKmh: 210,
@@ -26,7 +52,8 @@ export const VEHICLE_PRESETS = {
     horn: [220, 277], spotI: 95,
   },
   hatch: {
-    id: 'hatch', name: 'Pico S', shape: 'hatch',
+    id: 'hatch',
+    glb: 'assets/vehicles/pico-s.glb', name: 'Pico S', shape: 'hatch',
     desc: 'Nimble city runabout — quick and flickable',
     paint: 0xd9a514, glow: 0x35e0ff, tail: 0xff2233,
     mass: 760, engine: 2500, reverse: 1300, brake: 30, steer: 0.62, topKmh: 150,
@@ -34,7 +61,8 @@ export const VEHICLE_PRESETS = {
     horn: [523, 659], spotI: 70,
   },
   van: {
-    id: 'van', name: 'Colossus V', shape: 'van',
+    id: 'van',
+    glb: 'assets/vehicles/colossus-v.glb', name: 'Colossus V', shape: 'van',
     desc: 'A 2800-pound battering ram — nothing survives',
     paint: 0x2a6f97, glow: 0x9fe8ff, tail: 0xff2233,
     mass: 1750, engine: 3900, reverse: 2000, brake: 40, steer: 0.48, topKmh: 125,
@@ -144,6 +172,40 @@ export class GameVehicle {
 
     this.steerCurrent = 0;
     this.driftAmount = 0;
+
+    // ---------------------------------------- designed model (factory GLB)
+    this.glbModel = null;
+    this.glbWheels = null;
+    this.glbTail = null;
+  }
+
+  /** Designed GLB load (ek baar) — procedural body/wheels chhup jaate hain. */
+  ensureGLB() {
+    if (this.glbModel !== null || !this.preset.glb) return;
+    this.glbModel = false;                     // loading marker
+    designedLoader().load(this.preset.glb, (gltf) => {
+      const m = gltf.scene;
+      const wheels = [];
+      let tail = null;
+      m.traverse((o) => {
+        if (o.isMesh) {
+          o.castShadow = true;
+          o.receiveShadow = false;
+        }
+        if (o.name === 'WheelFL' || o.name === 'WheelFR'
+            || o.name === 'WheelRL' || o.name === 'WheelRR') wheels.push(o);
+        if (o.name === 'LightRear') tail = o;
+      });
+      this.group.add(m);
+      // procedural body chhupao (group children pehle se the)
+      for (const c of this.group.children) {
+        if (c !== m) c.visible = false;
+      }
+      for (const w of this.wheelMeshes) w.visible = false;
+      this.glbModel = m;
+      this.glbWheels = wheels.length === 4 ? wheels : null;
+      this.glbTail = tail;
+    }, undefined, () => { this.glbModel = null; });   // fail = procedural pe raho
   }
 
   _buildMesh(P) {
@@ -458,6 +520,15 @@ export class GameVehicle {
       const m = this.wheelMeshes[i];
       m.position.copy(wt.position);
       m.quaternion.copy(wt.quaternion);
+      if (this.glbWheels) {
+        const g = this.glbWheels[i];
+        g.position.copy(wt.position);
+        g.quaternion.copy(wt.quaternion);
+      }
+    }
+    if (this.glbTail && this.glbTail.material && this.glbTail.material.emissiveIntensity !== undefined) {
+      const hot = brake > 5 || handbrake;
+      this.glbTail.material.emissiveIntensity = hot ? 8 : 4;
     }
 
     // brake lights
