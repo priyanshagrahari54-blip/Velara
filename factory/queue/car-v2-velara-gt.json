@@ -5,8 +5,9 @@
   "velara-gt"
  ],
  "brief": "velara-gt v2 REBAKE-FREE \u2014 paint material + vertex-AO (black-texture bug fix) | REMASTER hi-detail (NS64xMR36, subsurf-2 export)",
- "status": "pending",
+ "status": "done",
  "priority": 1,
  "result": "factory/out/velara-gt.glb",
- "worker": null
+ "worker": "actions-cpu",
+ "claimed": 1794588526
 }
