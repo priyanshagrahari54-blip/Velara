@@ -4,10 +4,9 @@
  "args": [
   "pico-s"
  ],
- "brief": "Pico S v2 \u2014 LOFTED hatchback (yellow).",
- "status": "done",
+ "brief": "pico-s v2 REBAKE-FREE \u2014 paint material + vertex-AO (black-texture bug fix)",
+ "status": "pending",
  "priority": 1,
  "result": "factory/out/pico-s.glb",
- "worker": "actions-cpu",
- "claimed": 1794577890
+ "worker": null
 }

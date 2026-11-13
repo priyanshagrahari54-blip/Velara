@@ -1,0 +1,12 @@
+{
+ "id": "foliage-tree-street",
+ "script": "make-foliage.py",
+ "args": [
+  "tree-street"
+ ],
+ "brief": "Street tree ~5.4m (trunk + 6-blob canopy, mottled vertex shading)",
+ "status": "pending",
+ "priority": 1,
+ "result": "factory/out/tree-street.glb",
+ "worker": null
+}

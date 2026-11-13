@@ -1,0 +1,12 @@
+{
+ "id": "foliage-bush",
+ "script": "make-foliage.py",
+ "args": [
+  "bush"
+ ],
+ "brief": "Street bush mound ~1m",
+ "status": "pending",
+ "priority": 1,
+ "result": "factory/out/bush.glb",
+ "worker": null
+}

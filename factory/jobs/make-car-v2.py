@@ -500,159 +500,51 @@ def build():
 
 
 # ---------------------------------------------------------------- 2. high-poly
-@step("high_poly")
-def make_high():
+# ---------------------------------------------------------------- 2. VERTEX AO
+# BAKE-FREE: Cycles headless bake silently BLACK textures de raha tha (normal/AO/
+# rough sab 0,0,0 — GLB mein embedded, cars kaali dikhti thi!). Ab: paint color
+# direct material mein + AO vertex-colors se (geometry-driven, deterministic).
+@step("vertex_ao")
+def vertex_ao():
+    import random
+    rng = random.Random(47)
     body = globals()["BODY"]
-    bpy.ops.object.select_all(action="DESELECT")
-    body.select_set(True)
-    bpy.context.view_layer.objects.active = body
-    bpy.ops.object.duplicate()
-    high = bpy.context.active_object
-    high.name = "Body_HIGH"
-    # body ka live subsurf pehle apply (v2 loft already smooth hai)
-    if "Sub" in high.modifiers:
-        bpy.ops.object.modifier_apply(modifier="Sub")
-    sub = high.modifiers.new("S2", "SUBSURF")
-    sub.levels = 3
-    sub.render_levels = 3
-    bpy.ops.object.modifier_apply(modifier="S2")
-    bv = high.modifiers.new("B", "BEVEL")
-    bv.width = 0.010
-    bv.segments = 3
-    bv.limit_method = "ANGLE"
-    bv.angle_limit = math.radians(40)
-    bpy.ops.object.modifier_apply(modifier="B")
-    globals()["HIGH"] = high
-    return f"verts={len(high.data.vertices)}"
-# ---------------------------------------------------------------- 2. UV + bake
-@step("uv")
-def uv_unwrap():
-    body = globals()["BODY"]
-    bpy.ops.object.select_all(action="DESELECT")
-    body.select_set(True)
-    bpy.context.view_layer.objects.active = body
-    bpy.ops.object.mode_set(mode="EDIT")
-    bpy.ops.mesh.select_all(action="SELECT")
-    bpy.ops.uv.smart_project(angle_limit=math.radians(66.0), island_margin=0.02)
-    bpy.ops.object.mode_set(mode="OBJECT")
-    return "smart-project"
+    L, W, cl = P["L"], P["W"], P["clearance"]
+    wheelR = P["wheelR"]
+    archR = wheelR * 1.18
+    archCz = P["wheelbase"] / 2.0
+    wheelY = cl + wheelR
+    mesh = body.data
+    n = len(mesh.vertices)
+    col = mesh.attributes.new("ao", "BYTE_COLOR", "POINT")
+    zs = [v.co.z for v in mesh.vertices]
+    zmin, zmax = min(zs), max(zs)
+    for i, v in enumerate(mesh.vertices):
+        # 1) vertical gradient — neeche darker (underbody shadow)
+        t = (v.co.z - zmin) / max(1e-6, zmax - zmin)
+        g = 0.62 + 0.38 * (t ** 0.8)
+        # 2) wheel-arch proximity — arch ke aas-pass dusky
+        for cz in (-archCz, archCz):
+            r = math.hypot(v.co.y - cz, v.co.z - wheelY)
+            if r < archR * 1.3 and abs(v.co.x) > W * 0.18:
+                g *= 0.55 + 0.45 * min(1.0, r / (archR * 1.3))
+        # 3) nose/tail pinch thode darker (panel-gap feel)
+        pn = abs(v.co.y) / (L / 2)
+        g *= 1.0 - 0.10 * (pn ** 6)
+        # 4) micro paint mottling
+        g *= 0.97 + 0.06 * rng.random()
+        g = max(0.35, min(1.0, g))
+        col.data[i].color = (g, g, g, 1.0)
+    # glass canopy: halka top-light gradient
+    gm = globals().get("GLASS_M")
+    if gm and gm.type == "MESH":
+        gcol = gm.data.attributes.new("ao", "BYTE_COLOR", "POINT")
+        for i, v in enumerate(gm.data.vertices):
+            t = (v.co.z - zmin) / max(1e-6, zmax - zmin)
+            g = 0.80 + 0.20 * t
+            gcol.data[i].color = (g, g, g, 1.0)
+    return f"verts={n} (bake-free, paint=material+vertexAO)"
 
-
-@step("high_poly")
-def make_high():
-    body = globals()["BODY"]
-    bpy.ops.object.select_all(action="DESELECT")
-    body.select_set(True)
-    bpy.context.view_layer.objects.active = body
-    bpy.ops.object.duplicate()
-    high = bpy.context.active_object
-    high.name = "Body_HIGH"
-    sub = high.modifiers.new("S", "SUBSURF")
-    sub.levels = 2
-    sub.render_levels = 2
-    bpy.ops.object.modifier_apply(modifier="S")
-    bv = high.modifiers.new("B", "BEVEL")
-    bv.width = 0.012
-    bv.segments = 3
-    bv.limit_method = "ANGLE"
-    bv.angle_limit = math.radians(40)
-    bpy.ops.object.modifier_apply(modifier="B")
-    globals()["HIGH"] = high
-    return f"verts={len(high.data.vertices)}"
-
-
-@step("normal_bake")
-def bake_normal():
-    body, high, paint = globals()["BODY"], globals()["HIGH"], globals()["PAINT"]
-    setup_cycles(samples=16)
-    img = bpy.data.images.new("N_bake", A["bake"], A["bake"], alpha=False, float_buffer=False)
-    img.colorspace_settings.name = "Non-Color"
-    nt = paint.node_tree
-    node = nt.nodes.new("ShaderNodeTexImage")
-    node.image = img
-    node.select = True
-    nt.nodes.active = node
-    bpy.ops.object.select_all(action="DESELECT")
-    high.select_set(True)
-    body.select_set(True)
-    bpy.context.view_layer.objects.active = body
-    bpy.ops.object.bake(type="NORMAL", use_selected_to_active=True,
-                        max_ray_distance=0.08, margin=8, use_clear=True)
-    img.filepath = N_PNG
-    img.save()
-    globals()["IMG_N"] = img
-    return f"{A['bake']}px tangent normal (HIGH->LOW)"
-
-
-@step("ao_bake", required=False)
-def bake_ao():
-    body, high, paint = globals()["BODY"], globals()["HIGH"], globals()["PAINT"]
-    img = bpy.data.images.new("AO_bake", A["ao"], A["ao"], alpha=False, float_buffer=False)
-    img.colorspace_settings.name = "Non-Color"
-    nt = paint.node_tree
-    node = nt.nodes.new("ShaderNodeTexImage")
-    node.image = img
-    node.select = True
-    nt.nodes.active = node
-    bpy.ops.object.select_all(action="DESELECT")
-    high.select_set(True)
-    body.select_set(True)
-    bpy.context.view_layer.objects.active = body
-    bpy.ops.object.bake(type="AO", use_selected_to_active=True,
-                        max_ray_distance=1.2, margin=8, use_clear=True)
-    arr = np.asarray(img.pixels[:], dtype=np.float32).reshape(-1, 4)
-    arr[:, 0] *= 0.9
-    arr[:, 1] *= 0.9
-    arr[:, 2] *= 0.92
-    img.pixels = arr.ravel().tolist()
-    img.filepath = AO_PNG
-    img.save()
-    globals()["IMG_AO"] = img
-    return f"{A['ao']}px AO (tinted)"
-
-
-@step("roughness_noise", required=False)
-def make_roughness():
-    size = A["rough"]
-    rng = np.random.default_rng(23)
-    layers = []
-    for cell, w in ((64, 0.5), (16, 0.3), (4, 0.2)):
-        g = rng.random((cell, cell)).astype(np.float32)
-        rep = max(1, size // cell)
-        layers.append(w * np.repeat(np.repeat(g, rep, axis=0), rep, axis=1))
-    arr = np.clip(sum(layers) / 1.0, 0, 1)
-    arr = 0.18 + 0.22 * (arr - arr.min()) / (np.ptp(arr) + 1e-6)   # 0.18..0.40 glossy paint
-    img = bpy.data.images.new("R_bake", size, size, alpha=False, float_buffer=False)
-    img.colorspace_settings.name = "Non-Color"
-    px = np.dstack([arr, arr, arr, np.ones_like(arr)]).ravel()
-    img.pixels = px.tolist()
-    img.filepath = R_PNG
-    img.save()
-    globals()["IMG_R"] = img
-    return f"{size}px paint roughness wear"
-
-
-@step("wire_material")
-def wire():
-    paint = globals()["PAINT"]
-    nt = paint.node_tree
-    bsdf = nt.nodes["Principled BSDF"]
-    ao_node = next(n for n in nt.nodes if n.type == "TEX_IMAGE" and n.image
-                   and n.image.name == "AO_bake")
-    nt.links.new(ao_node.outputs["Color"], bsdf.inputs["Base Color"])
-    rn = nt.nodes.new("ShaderNodeTexImage")
-    rn.image = globals()["IMG_R"]
-    nt.links.new(rn.outputs["Color"], bsdf.inputs["Roughness"])
-    nn = next(n for n in nt.nodes if n.type == "TEX_IMAGE" and n.image
-              and n.image.name == "N_bake")
-    nm = nt.nodes.new("ShaderNodeNormalMap")
-    set_input(nm, ["Strength"], 1.0)
-    nt.links.new(nn.outputs["Color"], nm.inputs["Color"])
-    nt.links.new(nm.outputs["Normal"], bsdf.inputs["Normal"])
-    return "AO->base, wear->rough, normal->bump"
-
-
-# ---------------------------------------------------------------- 3. night render
 @step("night_render", required=False)
 def render_preview():
     scene = bpy.context.scene
@@ -832,23 +724,12 @@ def do_export():
 @step("glb_export")
 def export_glb():
     size = do_export()
-    if size > 1_500_000:   # budget guard: textures 25% chhote
-        for img in (globals().get("IMG_N"), globals().get("IMG_AO"), globals().get("IMG_R")):
-            if img:
-                img.scale(max(384, img.size[0] * 3 // 4), max(384, img.size[1] * 3 // 4))
-        size = do_export()
-        R["texture_downscaled"] = True
-    return f"{size} bytes"
+    return f"{size} bytes (bake-free)"
 
 
 # ---------------------------------------------------------------- main
 build()
-uv_unwrap()
-make_high()
-bake_normal()
-bake_ao()
-make_roughness()
-wire()
+vertex_ao()
 render_preview()
 render_studio()
 export_glb()

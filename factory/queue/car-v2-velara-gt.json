@@ -4,10 +4,9 @@
  "args": [
   "velara-gt"
  ],
- "brief": "Velara GT v2 \u2014 LOFTED ultra-detail sports car (red, spoiler). Hero vehicle.",
- "status": "done",
+ "brief": "velara-gt v2 REBAKE-FREE \u2014 paint material + vertex-AO (black-texture bug fix)",
+ "status": "pending",
  "priority": 1,
  "result": "factory/out/velara-gt.glb",
- "worker": "actions-cpu",
- "claimed": 1794577890
+ "worker": null
 }

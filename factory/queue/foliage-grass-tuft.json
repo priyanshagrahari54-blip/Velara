@@ -1,0 +1,12 @@
+{
+ "id": "foliage-grass-tuft",
+ "script": "make-foliage.py",
+ "args": [
+  "grass-tuft"
+ ],
+ "brief": "Grass tuft 16 blades, tip-bright gradient",
+ "status": "pending",
+ "priority": 1,
+ "result": "factory/out/grass-tuft.glb",
+ "worker": null
+}

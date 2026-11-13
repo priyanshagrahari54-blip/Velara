@@ -4,10 +4,9 @@
  "args": [
   "colossus-v"
  ],
- "brief": "Colossus V v2 \u2014 LOFTED SUV (green, roof rails).",
- "status": "done",
+ "brief": "colossus-v v2 REBAKE-FREE \u2014 paint material + vertex-AO (black-texture bug fix)",
+ "status": "pending",
  "priority": 1,
  "result": "factory/out/colossus-v.glb",
- "worker": "actions-cpu",
- "claimed": 1794577890
+ "worker": null
 }
