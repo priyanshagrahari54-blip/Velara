@@ -71,3 +71,37 @@ khatam. In-game cinematic grade pass (contrast, split-tone, vignette, film-grain
 
 **Known:** v2 GLB ~88KB/car (subsurf-1 export + HIGH-baked normals). Studio previews:
 `factory/out/<car>_studio.png`.
+
+---
+
+## v0.4.0 — Golden Hour + Day-Night + Full Green City (commit 243201f)
+
+**User ke choices (refs/quality-refs.jpg se):** Style **B — Golden Hour** + **day-night
+cycle** + **full green city** (har sidewalk pe trees + bushes + grass).
+
+| Check | Result |
+|---|---|
+| Mobile QA | **11/11 PASS**, console errors 0 |
+| Car paint (TRUE colors) | velara-gt RED (0.66,0.04,0.055) — GLB factor verified |
+| Foliage in-scene | 441 street + 21 park trees, 173 bushes, 375 tufts, 7 lawns (instanced) |
+| Tree asset render | isolated test 18.9% green pixels |
+| Day-night cycle | dusk(16:30) boot, clock chip live, 4 phases × 2.5 min |
+| CI Build+Smoke / apk / Heavy QA | sab SUCCESS |
+
+**Is round ke ROOT-CAUSE fixes:**
+1. **BLACK-TEXTURE BUG (sab vehicles affected since v1):** Cycles headless bake
+   silently black/magenta textures produce karta tha — normal/AO/rough sab — aur GLB
+   mein embed ho jaate the (cars kaali dikhti thi!). FIX: poora bake pipeline hata;
+   paint colors ab direct material + AO vertex-colors se (bake-free). Cars 88→68KB.
+2. Foliage GLB trunk/canopy alag primitives — pehla-mesh grab sirf trunk deta;
+   ab merge-with-groups.
+3. Blender `--python` exception par exit-0 — workflow failed jobs "done" mark karta
+   tha; ab scripts failure par sys.exit(1).
+4. Duplicate clock system (static "23:40 · RAAT" placeholder + gameMinutes wala)
+   hata — ab env-cycle-driven top-center chip.
+
+**Bugs in factory scripts (round-2):** ico_sphere operator naam, Glass-mesh lookup,
+dono fix + re-render 9 assets cloud par.
+
+**Known:** cycle sirf gameplay ke da advance hota hai (menu/pause par frozen —
+intentional). Emergency tier par foliage density half + tree shadows off.
