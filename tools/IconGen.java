@@ -72,15 +72,16 @@ public class IconGen {
 
   public static void main(String[] args) throws Exception {
     File res = new File(args[0]);
-    int[][] D = {
+    Object[][] D = {
         { 48, "mipmap-mdpi" }, { 72, "mipmap-hdpi" }, { 96, "mipmap-xhdpi" },
         { 144, "mipmap-xxhdpi" }, { 192, "mipmap-xxxhdpi" },
     };
-    for (int[] d : D) {
-      File dir = new File(res, d[1]);
+    for (Object[] d : D) {
+      int size = (Integer) d[0];
+      File dir = new File(res, (String) d[1]);
       dir.mkdirs();
-      ImageIO.write(render(d[0], false), "png", new File(dir, "ic_launcher.png"));
-      ImageIO.write(render(d[0], true), "png", new File(dir, "ic_launcher_round.png"));
+      ImageIO.write(render(size, false), "png", new File(dir, "ic_launcher.png"));
+      ImageIO.write(render(size, true), "png", new File(dir, "ic_launcher_round.png"));
     }
     System.out.println("icons written: " + res);
   }
