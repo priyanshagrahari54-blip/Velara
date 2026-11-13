@@ -105,3 +105,37 @@ dono fix + re-render 9 assets cloud par.
 
 **Known:** cycle sirf gameplay ke da advance hota hai (menu/pause par frozen —
 intentional). Emergency tier par foliage density half + tree shadows off.
+
+---
+
+## v0.5.0 — REMASTER: sim-physics + damage + police + hi-detail (commit 679b4d9)
+
+**User directives:** sim-realistic physics (GTA-jaisa), progressive dent damage (image-match),
+full police (wanted/chase/BUSTED, spikes/heli baad mein), GTA5-level detail (~500k ask).
+
+| Check | Result |
+|---|---|
+| Mobile QA | **11/11 PASS**, console errors 0 |
+| Crime → wanted | reportCrime(1) → wanted 1, stars "★" UI live |
+| Car damage | wall-slam 14m/s → **damage 43.7** (dents + power-loss path) |
+| GAS (game-time) | 27 kmh/3s (sim torque curve) · STEER 1.37 rad |
+| Hi-detail cars | **102,092 tris/car** (NS64×MR36, subsurf-2, bake-free) |
+| CI Build+Smoke / apk / Heavy QA | sab SUCCESS |
+
+**Naya:**
+1. **SIM PHYSICS** — torque curve (natural taper, hard governor khatam), brake-dive/
+   throttle-squat weight transfer, per-wheel slip (cannon skidInfo) → skidmarks
+   (instanced ring-buffer, fade), tyre smoke, screech audio hook.
+2. **DAMAGE (GTA5-style progressive)** — collide impulse → vertex dent (contact point
+   se car-center ki taraf, falloff smooth, normals recompute), 55%+ power loss, 88%+
+   misfire, 72%+ engine smoke, HUD damage bar (speedo ke neeche).
+3. **POLICE** — wanted 0-5 ★, crimes: firing (range ke bahar) / traffic-hit / police-ram;
+   3 pursuit units max, steer-toward-player AI + stuck-respawn; BUSTED (slow+5.5m+2.5s)
+   → fine ₹300 + respawn; evade decay (70m+ 12s → star kam). Lightbar strobe live.
+4. **SMALL-OBJECT PHYSICS** — 17 cones + 6 bins (CANNON bodies, knockable).
+5. **PLAYER** — momentum movement (accel 8 / stop-slide 4.5).
+6. **FACTORY** — hi-detail re-render 5 cars (68KB→236KB, 25k→102k tris).
+
+**Known:** night screenshots sandbox par nahi ban paate (SwiftShader OOM — game theek,
+CI smoke green). Police steering-sign: +diff convention (A-key=left mapping se derived).
+Concept refs: refs/remaster-damage.jpg, remaster-police.jpg, remaster-street-detail.jpg.
