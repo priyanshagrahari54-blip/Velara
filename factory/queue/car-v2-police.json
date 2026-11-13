@@ -5,9 +5,9 @@
   "police"
  ],
  "brief": "Police Interceptor v2 \u2014 LOFTED (white, lightbar).",
- "status": "done",
+ "status": "pending",
  "priority": 1,
  "result": "factory/out/police.glb",
- "worker": "actions-cpu",
+ "worker": null,
  "claimed": 1794577300
 }

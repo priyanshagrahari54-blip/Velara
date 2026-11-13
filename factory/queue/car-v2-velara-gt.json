@@ -5,9 +5,9 @@
   "velara-gt"
  ],
  "brief": "Velara GT v2 \u2014 LOFTED ultra-detail sports car (red, spoiler). Hero vehicle.",
- "status": "done",
+ "status": "pending",
  "priority": 1,
  "result": "factory/out/velara-gt.glb",
- "worker": "actions-cpu",
+ "worker": null,
  "claimed": 1794577300
 }

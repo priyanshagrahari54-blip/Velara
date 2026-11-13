@@ -314,7 +314,7 @@ def build():
         if u < 0.04:
             wHalf *= 1.0 - (0.04 - u) / 0.04 * 0.45
         body_st.append((y, wHalf, botZ, topZ, e, prof["tumble"]))
-    body = loft("Body", paint, body_st, subsurf=2)
+    body = loft("Body", paint, body_st, subsurf=1)
 
     # ---------------- glass canopy (panorama) ----------------
     cLen = P["cabinLen"]
@@ -331,7 +331,7 @@ def build():
         botZ = beltZ - 0.05
         wHalf = (W / 2) * curve(u, prof["plan"]) * 0.82
         cab_st.append((y, wHalf, botZ, topZ, 2.3, 0.70))
-    canopy = loft("Glass", glass, cab_st, subsurf=2)
+    canopy = loft("Glass", glass, cab_st, subsurf=1)
 
     paint_parts, trim_parts, glass_parts, lf_parts, lr_parts = [body], [], [canopy], [], []
 

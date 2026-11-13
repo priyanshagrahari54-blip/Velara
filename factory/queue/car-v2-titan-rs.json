@@ -5,9 +5,9 @@
   "titan-rs"
  ],
  "brief": "Titan RS v2 \u2014 LOFTED muscle sedan (deep blue).",
- "status": "done",
+ "status": "pending",
  "priority": 1,
  "result": "factory/out/titan-rs.glb",
- "worker": "actions-cpu",
+ "worker": null,
  "claimed": 1794577300
 }

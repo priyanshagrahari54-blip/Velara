@@ -5,9 +5,9 @@
   "pico-s"
  ],
  "brief": "Pico S v2 \u2014 LOFTED hatchback (yellow).",
- "status": "done",
+ "status": "pending",
  "priority": 1,
  "result": "factory/out/pico-s.glb",
- "worker": "actions-cpu",
+ "worker": null,
  "claimed": 1794577300
 }

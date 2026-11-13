@@ -5,9 +5,9 @@
   "colossus-v"
  ],
  "brief": "Colossus V v2 \u2014 LOFTED SUV (green, roof rails).",
- "status": "done",
+ "status": "pending",
  "priority": 1,
  "result": "factory/out/colossus-v.glb",
- "worker": "actions-cpu",
+ "worker": null,
  "claimed": 1794577300
 }
