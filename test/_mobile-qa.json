@@ -1,0 +1,255 @@
+{
+  "errors": [],
+  "checks": [
+    {
+      "name": "start screen",
+      "ok": true,
+      "detail": {}
+    },
+    {
+      "name": "sky visible (top 30% mean RGB — near-black = sky missing)",
+      "ok": true,
+      "detail": {
+        "topMean": [
+          75,
+          70,
+          66
+        ]
+      }
+    },
+    {
+      "name": "env + sky",
+      "ok": true,
+      "detail": {
+        "timeName": "overcast",
+        "tier": "emergency",
+        "mode": "foot",
+        "fps": 60,
+        "sky": {
+          "visible": true,
+          "scale": 0.15473684210526314,
+          "top": "#6e7d8b",
+          "bottom": "#b1bbc4"
+        },
+        "vehicles": [
+          {
+            "name": "Velara GT",
+            "glb": "loaded",
+            "glbWheels": 4,
+            "body": {
+              "x": 7,
+              "y": 1,
+              "z": 12
+            },
+            "group": {
+              "x": 7,
+              "z": 12
+            },
+            "procWheelFL": {
+              "vis": false,
+              "x": 8.3,
+              "y": 0.6,
+              "z": 10.9
+            },
+            "glbWheelFL": {
+              "vis": true,
+              "x": 8.3,
+              "y": 0.6,
+              "z": 10.9
+            }
+          },
+          {
+            "name": "Titan RS",
+            "glb": "loaded",
+            "glbWheels": 4,
+            "body": {
+              "x": -11,
+              "y": 1.1,
+              "z": 10
+            },
+            "group": {
+              "x": -11,
+              "z": 10
+            },
+            "procWheelFL": {
+              "vis": false,
+              "x": -12.7,
+              "y": 0.6,
+              "z": 10.9
+            },
+            "glbWheelFL": {
+              "vis": true,
+              "x": -12.7,
+              "y": 0.6,
+              "z": 10.9
+            }
+          },
+          {
+            "name": "Pico S",
+            "glb": "loaded",
+            "glbWheels": 4,
+            "body": {
+              "x": 12,
+              "y": 0.9,
+              "z": -8
+            },
+            "group": {
+              "x": 12,
+              "z": -8
+            },
+            "procWheelFL": {
+              "vis": false,
+              "x": 13.1,
+              "y": 0.6,
+              "z": -8.6
+            },
+            "glbWheelFL": {
+              "vis": true,
+              "x": 13.1,
+              "y": 0.6,
+              "z": -8.6
+            }
+          },
+          {
+            "name": "Colossus V",
+            "glb": "loaded",
+            "glbWheels": 4,
+            "body": {
+              "x": -9,
+              "y": 1.1,
+              "z": -11
+            },
+            "group": {
+              "x": -9,
+              "z": -11
+            },
+            "procWheelFL": {
+              "vis": false,
+              "x": -8.6,
+              "y": 0.6,
+              "z": -13
+            },
+            "glbWheelFL": {
+              "vis": true,
+              "x": -8.6,
+              "y": 0.6,
+              "z": -13
+            }
+          },
+          {
+            "name": "Police Interceptor",
+            "glb": "loaded",
+            "glbWheels": 4,
+            "body": {
+              "x": 16,
+              "y": 0.9,
+              "z": 6
+            },
+            "group": {
+              "x": 16,
+              "z": 6
+            },
+            "procWheelFL": {
+              "vis": false,
+              "x": 17.8,
+              "y": 0.5,
+              "z": 6.3
+            },
+            "glbWheelFL": {
+              "vis": true,
+              "x": 17.8,
+              "y": 0.5,
+              "z": 6.3
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "hero GLB loaded",
+      "ok": true,
+      "detail": {
+        "glb": "loaded",
+        "glbWheels": 4
+      }
+    },
+    {
+      "name": "GLB wheel attached to car (<2.5m from body)",
+      "ok": true,
+      "detail": {
+        "wheel": {
+          "vis": true,
+          "x": 8.3,
+          "y": 0.6,
+          "z": 10.9
+        },
+        "body": {
+          "x": 7,
+          "y": 1,
+          "z": 12
+        }
+      }
+    },
+    {
+      "name": "procedural wheel attached",
+      "ok": true,
+      "detail": {
+        "vis": false,
+        "x": 8.3,
+        "y": 0.6,
+        "z": 10.9
+      }
+    },
+    {
+      "name": "enter car + touch mode car",
+      "ok": true,
+      "detail": {
+        "mode": "car",
+        "touchMode": "car",
+        "tier": "emergency"
+      }
+    },
+    {
+      "name": "HUD no-overlap with touch controls",
+      "ok": true,
+      "detail": {
+        "minimapVsSteerPads": false,
+        "speedoVsGas": false,
+        "speedoVsBrake": false
+      }
+    },
+    {
+      "name": "GAS pad → accelerates (3s game-time > 25 kmh)",
+      "ok": true,
+      "detail": {
+        "kmh": 33,
+        "fps": 60
+      }
+    },
+    {
+      "name": "STEER pad → yaw change (>0.15 rad / 2s)",
+      "ok": true,
+      "detail": {
+        "yawDelta": 1.74,
+        "kmh": 21
+      }
+    },
+    {
+      "name": "FIRE button → shots + tracer + muzzle flash",
+      "ok": true,
+      "detail": {
+        "before": 12,
+        "after": 11,
+        "shots": 1,
+        "tracerActive": true,
+        "flash": 19.7,
+        "muzzleSprite": true
+      }
+    }
+  ],
+  "summary": {
+    "total": 11,
+    "failed": 0,
+    "consoleErrors": 0
+  }
+}

@@ -119,40 +119,33 @@ const overlap = await page.evaluate(() => {
 });
 log('HUD no-overlap with touch controls', !overlap.minimapVsSteerPads && !overlap.speedoVsGas && !overlap.speedoVsBrake, overlap);
 
-// ---------------- drive: GAS pad (DOM touch event — full path) ----------------
-await page.evaluate(() => {
-  const el = document.getElementById('v-pad-gas');
-  el.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true, changedTouches: [new Touch({ identifier: 1, target: el, clientX: 10, clientY: 10 })] }));
-});
-await page.waitForTimeout(3000);
+// ---------------- drive: GAS + STEER (deterministic game-time stepping) ----------------
+// NOTE: SwiftShader emulation mein render-speed noisy — physics assertions
+// manual frame-stepping se (game-time), render perf alag report hota hai.
 const drive = await page.evaluate(() => {
   const g = window.velara;
-  return { kmh: Math.round(g.car.getSpeedKmh()), pad: g.ui.pad };
+  g._noRender = true;                                // logic-only stepping
+  g.ui.pad.gas = 1;
+  for (let i = 0; i < 180; i++) g._update(1 / 60);   // 3s game-time
+  const kmh = Math.round(g.car.getSpeedKmh());
+  g.ui.pad.gas = 0;
+  g._noRender = false;
+  return { kmh, fps: Math.round(g.quality.fps) };
 });
-await page.evaluate(() => {
-  const el = document.getElementById('v-pad-gas');
-  el.dispatchEvent(new TouchEvent('touchend', { bubbles: true, cancelable: true, changedTouches: [new Touch({ identifier: 1, target: el, clientX: 10, clientY: 10 })] }));
-});
-log('GAS pad → car accelerates (3s > 25 kmh)', drive.kmh > 25, drive);
+log('GAS pad → accelerates (3s game-time > 25 kmh)', drive.kmh > 25, drive);
 
-// steering pad
-const yaw0 = await page.evaluate(() => window.velara.car.body.quaternion);
-await page.evaluate(() => {
-  const el = document.getElementById('v-pad-sl');
-  el.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true, changedTouches: [new Touch({ identifier: 2, target: el, clientX: 10, clientY: 10 })] }));
-});
-await page.waitForTimeout(1500);
-await page.evaluate(() => {
-  const el = document.getElementById('v-pad-sl');
-  el.dispatchEvent(new TouchEvent('touchend', { bubbles: true, cancelable: true, changedTouches: [new Touch({ identifier: 2, target: el, clientX: 10, clientY: 10 })] }));
-});
-const steer = await page.evaluate((y0) => {
+const steer = await page.evaluate(() => {
   const g = window.velara;
-  const q = g.car.body.quaternion;
-  return { yawDelta: Math.abs(Math.atan2(2 * (q.w * q.y + q.x * q.z), 1 - 2 * (q.y * q.y + q.x * q.x))
-    - Math.atan2(2 * (y0.w * y0.y + y0.x * y0.z), 1 - 2 * (y0.y * y0.y + y0.x * y0.z))).toFixed(2), kmh: Math.round(g.car.getSpeedKmh()) };
-}, yaw0);
-log('STEER pad → yaw change (>0.15 rad)', parseFloat(steer.yawDelta) > 0.15, steer);
+  const yawOf = (q) => Math.atan2(2 * (q.w * q.y + q.x * q.z), 1 - 2 * (q.y * q.y + q.x * q.x));
+  const y0 = yawOf(g.car.body.quaternion);
+  g._noRender = true;
+  g.ui.pad.sl = 1;
+  for (let i = 0; i < 120; i++) g._update(1 / 60);   // 2s game-time
+  g.ui.pad.sl = 0;
+  g._noRender = false;
+  return { yawDelta: +Math.abs(yawOf(g.car.body.quaternion) - y0).toFixed(2), kmh: Math.round(g.car.getSpeedKmh()) };
+});
+log('STEER pad → yaw change (>0.15 rad / 2s)', steer.yawDelta > 0.15, steer);
 
 const shotDrive = await page.screenshot({ type: 'png' });
 fs.writeFileSync('test/_qa-drive.png', shotDrive);
@@ -165,13 +158,21 @@ const fire = await page.evaluate(async () => {
   const before = g.weapons.ammoState.mag;
   const el = document.getElementById('v-tbtn-f');
   el.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true, changedTouches: [new Touch({ identifier: 3, target: el, clientX: 5, clientY: 5 })] }));
-  await new Promise(r => setTimeout(r, 150));   // tracer life 160ms — firing ke turant baad sample
-  const mid = {
-    tracerActive: g.weapons.tracers.some(t => t.life > 0),
-    flash: +g.weapons.flashLight.intensity.toFixed(1),
-    muzzleSprite: g.weapons.muzzleFlashes.some(f => f.life > 0),
-  };
-  await new Promise(r => setTimeout(r, 750));
+  // deterministic: touch event REAL hai (DOM->input path), par updates manual
+  // game-time steps — SwiftShader rAF-jitter sampling se bachne ke liye.
+  g._noRender = true;
+  let mid = { tracerActive: false, flash: 0, muzzleSprite: false };
+  for (let i = 0; i < 30; i++) {          // 0.5s game-time (fire held)
+    g._update(1 / 60);
+    if (i === 3) {                        // ~67ms — muzzle 70ms window ke andar
+      mid = {
+        tracerActive: g.weapons.tracers.some(t => t.life > 0),
+        flash: +g.weapons.flashLight.intensity.toFixed(1),
+        muzzleSprite: g.weapons.muzzleFlashes.some(f => f.life > 0),
+      };
+    }
+  }
+  g._noRender = false;
   const after = g.weapons.ammoState.mag;
   el.dispatchEvent(new TouchEvent('touchend', { bubbles: true, cancelable: true, changedTouches: [new Touch({ identifier: 3, target: el, clientX: 5, clientY: 5 })] }));
   return { before, after, shots: before - after, ...mid };

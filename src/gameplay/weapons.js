@@ -209,6 +209,7 @@ export class WeaponManager {
     t.mesh.position.copy(from);
     t.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
     t.mesh.scale.set(1, len, 1);
+    t.mesh.material.opacity = 0.85;   // spawn par hi reset
     t.mesh.visible = true;
     t.life = 0.16;
   }
@@ -219,6 +220,7 @@ export class WeaponManager {
     f.sprite.position.copy(pos);
     f.sprite.scale.set(size, size, 1);
     f.sprite.material.rotation = Math.random() * Math.PI * 2;
+    f.sprite.material.opacity = 1;   // spawn par hi reset (QA: pehle sirf next-tick par set hoti thi)
     f.sprite.visible = true;
     f.life = f.max = 0.07;
   }
@@ -228,6 +230,7 @@ export class WeaponManager {
     this._impactCursor = (this._impactCursor + 1) % this.impactFlashes.length;
     f.sprite.position.copy(pos);
     f.sprite.scale.set(size, size, 1);
+    f.sprite.material.opacity = 1;   // spawn par hi reset
     f.sprite.visible = true;
     f.life = f.max = 0.12;
   }
@@ -256,14 +259,17 @@ export class WeaponManager {
   }
 
   _updateEffects(dt) {
+    // dt clamp — low-fps frames par quick VFX (muzzle 70ms) ek hi frame
+    // mein nahi marna chahiye (QA ne pakda: dt 0.1s => sprite gayab)
+    const edt = Math.min(dt, 0.05);
     // flash light decay (thoda der tak — visible recoil feedback)
-    this.flashLight.intensity *= Math.exp(-dt * 16);
+    this.flashLight.intensity *= Math.exp(-edt * 16);
     if (this.flashLight.intensity < 0.3) this.flashLight.intensity = 0;
 
     // tracers
     for (const t of this.tracers) {
       if (t.life <= 0) continue;
-      t.life -= dt;
+      t.life -= edt;
       const k = Math.max(0, t.life / 0.16);
       t.mesh.material.opacity = k * 0.85;
       t.mesh.scale.x = t.mesh.scale.z = 0.5 + k * 0.5;
@@ -274,10 +280,10 @@ export class WeaponManager {
     for (const pool of [this.muzzleFlashes, this.impactFlashes]) {
       for (const f of pool) {
         if (f.life <= 0) continue;
-        f.life -= dt;
+        f.life -= edt;
         const k = Math.max(0, f.life / f.max);
         f.sprite.material.opacity = k;
-        f.sprite.scale.multiplyScalar(1 + dt * 6); // quick expand
+        f.sprite.scale.multiplyScalar(1 + edt * 6); // quick expand
         if (f.life <= 0) f.sprite.visible = false;
       }
     }
