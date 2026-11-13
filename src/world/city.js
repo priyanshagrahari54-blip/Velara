@@ -211,7 +211,8 @@ export function buildCity(scene, world, opts = {}) {
 
   // facade variants (map + emissive)
   const facades = [];
-  const baseColors = ['#232a36', '#2b2622', '#1e2430', '#302a33'];
+  // S3 overcast palette: beige / warm gray / brick / concrete (European mid-rise)
+  const baseColors = ['#b5aa96', '#a79d8f', '#9a7360', '#939aa1'];
   for (let v = 0; v < 4; v++) {
     const cols = 6, rows = 12, W = 256, H = 512;
     const cw = W / cols, ch = H / rows;
@@ -313,8 +314,8 @@ export function buildCity(scene, world, opts = {}) {
   scene.add(groundMesh);
 
   const roadMat = new THREE.MeshStandardMaterial({
-    map: roadTex, color: 0xa8adb5, roughness: 0.8, metalness: 0.08,
-    envMapIntensity: 0.5,
+    map: roadTex, color: 0x99a0a8, roughness: 0.72, metalness: 0.08,
+    envMapIntensity: 0.7,
   });
   const LEN = EXTENT * 2 + 30;
   // 60fps: saare 16 road-planes ek hi merged geometry (16 draws -> 1)
@@ -689,17 +690,16 @@ export function buildCity(scene, world, opts = {}) {
 
   function makeBillboard(text, color, x, y, z, ry) {
     const tex = canvasTexture(256, 512, (c, w, h) => {
-      c.fillStyle = '#070a12'; c.fillRect(0, 0, w, h);
-      c.strokeStyle = color; c.lineWidth = 10; c.strokeRect(14, 14, w - 28, h - 28);
+      c.fillStyle = '#26292f'; c.fillRect(0, 0, w, h);
+      c.strokeStyle = '#cfc9bd'; c.lineWidth = 8; c.strokeRect(14, 14, w - 28, h - 28);
       c.fillStyle = color; c.textAlign = 'center';
-      c.shadowColor = color; c.shadowBlur = 30;
       const words = text.split(' ');
       const fs = words.length > 1 ? 64 : 84;
       c.font = `bold ${fs}px Arial`;
       words.forEach((word, i) =>
         c.fillText(word, w / 2, h / 2 + (i - (words.length - 1) / 2) * (fs + 16) + fs * 0.35));
     }, false);
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(7, 15), new THREE.MeshBasicMaterial({ map: tex }));
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(7, 15), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85 }));
     m.position.set(x, y, z);
     m.rotation.y = ry;
     add(m);
@@ -730,9 +730,10 @@ export function buildCity(scene, world, opts = {}) {
       scene.add(c);
     }
     const signTex = canvasTexture(512, 128, (c, w, h) => {
-      c.fillStyle = 'rgba(6,10,18,0.95)'; c.fillRect(0, 0, w, h);
+      c.fillStyle = '#cfc9bd'; c.fillRect(0, 0, w, h);
+      c.strokeStyle = '#8a8474'; c.lineWidth = 6; c.strokeRect(5, 5, w - 10, h - 10);
       c.font = 'bold 60px Arial'; c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.shadowColor = '#35e0ff'; c.shadowBlur = 24; c.fillStyle = '#35e0ff';
+      c.fillStyle = '#2b2f36';
       c.fillText('VELARA CENTRAL — METRO', w / 2, h / 2);
     }, false);
     const sign = new THREE.Mesh(new THREE.PlaneGeometry(14, 3.2), new THREE.MeshBasicMaterial({ map: signTex }));
@@ -741,9 +742,10 @@ export function buildCity(scene, world, opts = {}) {
     scene.add(sign);
     // train: 4 cars, glowing windows + blue underglow strips
     const train = new THREE.Group();
+    // metro sign — plain painted board (no glow)
     const carBody = new THREE.MeshStandardMaterial({ color: 0xd8dde4, roughness: 0.35, metalness: 0.6 });
-    const carGlass = new THREE.MeshStandardMaterial({ color: 0x0a1420, emissive: 0x9fd8ff, emissiveIntensity: 1.6, roughness: 0.2 });
-    const glow = new THREE.MeshStandardMaterial({ color: 0x081018, emissive: 0x37b6ff, emissiveIntensity: 2.4 });
+    const carGlass = new THREE.MeshStandardMaterial({ color: 0x0a1420, emissive: 0x9fd8ff, emissiveIntensity: 0.3, roughness: 0.2 });
+    const glow = new THREE.MeshStandardMaterial({ color: 0x081018, emissive: 0x37b6ff, emissiveIntensity: 0.1 });
     for (let i = 0; i < 4; i++) {
       const car = new THREE.Group();
       const b = new THREE.Mesh(new THREE.BoxGeometry(2.7, 2.5, 10.5), carBody);
@@ -847,9 +849,9 @@ export function buildCity(scene, world, opts = {}) {
   makeBusStop(-16.2, -64, Math.PI / 2);
   makeBusStop(64, -15.8, 0);
   makeBusStop(15.8, 78, -Math.PI / 2);
-  makeBillboard('VELARA', '#35e0ff', ROADS[ROADS.length - 1] - 9, 22, -60, -Math.PI / 2);
-  makeBillboard('AURORA', '#ff5fd8', ROADS[ROADS.length - 1] - 9, 20, 20, -Math.PI / 2);
-  makeBillboard('KAZE TECHNOLOGIES', '#7dff9a', ROADS[ROADS.length - 1] - 9, 26, 90, -Math.PI / 2);
+  makeBillboard('VELARA', '#e8eaef', ROADS[ROADS.length - 1] - 9, 22, -60, -Math.PI / 2);
+  makeBillboard('AURORA', '#d8b98a', ROADS[ROADS.length - 1] - 9, 20, 20, -Math.PI / 2);
+  makeBillboard('KAZE TECHNOLOGIES', '#a8c4d8', ROADS[ROADS.length - 1] - 9, 26, 90, -Math.PI / 2);
 
   // ---------------------------------------------------------- street lamps
   const poleMat = new THREE.MeshStandardMaterial({ color: 0x2a2e35, roughness: 0.6, metalness: 0.7 });
@@ -857,6 +859,7 @@ export function buildCity(scene, world, opts = {}) {
     color: 0x33363c, emissive: 0xffd9a0, emissiveIntensity: 2.2, roughness: 0.5,
   });
   const lampLights = [];
+  let lampGlowMat = null;
   const lampGlowPos = [];
   let lampIndex = 0;
   function addLamp(x, z, dirX, dirZ) {
@@ -921,48 +924,40 @@ export function buildCity(scene, world, opts = {}) {
         map: tex, size: 7.5, sizeAttenuation: true, transparent: true,
         depthWrite: false, blending: THREE.AdditiveBlending,
       });
+      lampGlowMat = gmat; // env-driven: overcast/day par 0, night par halke warm halo
       scene.add(new THREE.Points(geo, gmat));
     }
   }
 
-  // ----------------------------------------------------------- neon signs
+  // ------------------------------------------------------ painted signboards
+  // (neon OUT — real duniya jaisi mat painted boards, zero glow)
   const NEON_TEXTS = [
-    ['VELARA', '#35e0ff'], ['CLUB 24/7', '#ff3fd8'], ['HOTEL', '#ffb545'],
-    ['NEON', '#57ff9a'], ['बार BAR', '#ff4455'], ['PAAN', '#8affd7'],
-    ['MASALA CHAI', '#ffd166'], ['OPEN 24H', '#35e0ff'], ['GARAGE', '#9d7bff'],
-    ['DINER', '#ff7a45'], ['रात्रि', '#ff3fd8'], ['CASINO', '#ffd166'],
+    ['VELARA', '#2b2f36'], ['CLUB 24/7', '#5a2430'], ['HOTEL', '#243a5a'],
+    ['CITY MART', '#1f4030'], ['बार BAR', '#4a2020'], ['PAAN', '#2f4038'],
+    ['MASALA CHAI', '#4a3418'], ['OPEN 24H', '#2b2f36'], ['GARAGE', '#3a3a44'],
+    ['DINER', '#5a3a20'], ['रात्रि', '#42222e'], ['MOTORS', '#23303e'],
   ];
   const neonSigns = [];
-  const neonLights = [];
   function addNeon(i, x, y, z, ry) {
     const [text, color] = NEON_TEXTS[i % NEON_TEXTS.length];
     const tex = canvasTexture(512, 128, (c, w, h) => {
       c.clearRect(0, 0, w, h);
-      c.fillStyle = 'rgba(5,7,10,0.9)';
+      c.fillStyle = '#cfc9bd';                     // painted board
       c.fillRect(0, 0, w, h);
-      c.font = 'bold 76px Arial';
+      c.strokeStyle = '#8a8474'; c.lineWidth = 6;  // frame
+      c.strokeRect(5, 5, w - 10, h - 10);
+      c.font = 'bold 64px Arial';
       c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.shadowColor = color; c.shadowBlur = 26;
-      c.fillStyle = color;
-      c.fillText(text, w / 2, h / 2 + 4);
-      c.shadowBlur = 8;
-      c.fillStyle = '#ffffff';
-      c.fillText(text, w / 2, h / 2 + 4);
+      c.fillStyle = color;                          // matte painted text
+      c.fillText(text, w / 2, h / 2 + 3);
     }, false);
-    const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true });
+    const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85, metalness: 0.05 });
     const wMesh = 7 + Math.min(6, text.length * 0.35);
     const plane = new THREE.Mesh(new THREE.PlaneGeometry(wMesh, wMesh / 4), mat);
     plane.position.set(x, y, z);
     plane.rotation.y = ry;
     chunkAt(x, z).add(plane);
-    neonSigns.push({ mat, phase: Math.random() * 10, flickery: Math.random() < 0.25 });
-    if (i % 3 === 0) {
-      const l = new THREE.PointLight(new THREE.Color(color), 26, 34, 1.9);
-      const off = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), ry);
-      l.position.set(x + off.x * 1.2, y, z + off.z * 1.2);
-      scene.add(l);
-      neonLights.push(l);
-    }
+    neonSigns.push({ mat });
   }
   let neonI = 0;
   for (let b = 0; b < 12; b++) {
@@ -1012,7 +1007,7 @@ export function buildCity(scene, world, opts = {}) {
     const water = new THREE.Mesh(
       new THREE.CylinderGeometry(2.85, 2.85, 0.12, 20),
       new THREE.MeshStandardMaterial({
-        color: 0x0e3a4a, emissive: 0x2fd7c8, emissiveIntensity: 0.55,
+        color: 0x2e5a66, emissive: 0x1a3844, emissiveIntensity: 0.25,
         roughness: 0.15, metalness: 0.4,
       }));
     water.position.set(cx, 0.94, cz);
@@ -1022,7 +1017,7 @@ export function buildCity(scene, world, opts = {}) {
     add(base, water, pillar);
     staticBox(3.3, 0.38, 3.3, cx, 0.56, cz);
     staticBox(0.5, 1.2, 0.5, cx, 1.9, cz);
-    const l = new THREE.PointLight(0x3fd7c8, 26, 38, 1.8);
+    const l = new THREE.PointLight(0x9fc8d4, 10, 30, 1.8); // soft neutral fountain light
     l.position.set(cx, 2.6, cz);
     scene.add(l);
   }
@@ -1133,6 +1128,7 @@ export function buildCity(scene, world, opts = {}) {
     for (let i = 0; i < lampLights.length; i++) {
       lampLights[i].intensity = env.lampIntensity * (0.92 + 0.08 * Math.sin(t * 11 + i * 2.4));
     }
+    if (lampGlowMat) lampGlowMat.opacity = Math.min(1, env.lampIntensity / 30);
     // windows
     for (const m of facades) m.emissiveIntensity = env.windowGlow;
     for (const m of podiumMats) m.emissiveIntensity = env.windowGlow * 1.1;
@@ -1140,20 +1136,6 @@ export function buildCity(scene, world, opts = {}) {
     // beacons
     const blink = (Math.sin(t * 2.2) > 0.6) ? 1 : 0.06;
     for (const b of beacons) b.material.color.setRGB(1 * blink + 0.1, 0.15, 0.25);
-    // neon flicker
-    for (const s of neonSigns) {
-      let k = 1;
-      if (s.flickery) {
-        k = 0.75 + 0.25 * Math.sin(t * 9 + s.phase);
-        if (Math.sin(t * 2.3 + s.phase * 3) > 0.985) k = 0.15;
-      } else {
-        k = 0.92 + 0.08 * Math.sin(t * 1.7 + s.phase);
-      }
-      s.mat.color.setScalar(k);
-    }
-    for (let i = 0; i < neonLights.length; i++) {
-      neonLights[i].intensity = (env.timeName === 'day' ? 0 : 26) * (0.9 + 0.1 * Math.sin(t * 3 + i));
-    }
     // wet streets
     const wet = env.rainAmount;
     for (const m of wetMats) {
@@ -1208,7 +1190,7 @@ export function buildCity(scene, world, opts = {}) {
     }
     if (vd) viewDist = vd;
     let n = 0;
-    for (const l of [...lampLights, ...neonLights]) {
+    for (const l of lampLights) {
       const on = n < maxLights;
       if (on) n++;
       if (on && !l.parent) scene.add(l);

@@ -5,6 +5,14 @@ import * as THREE from 'three';
 // ---------------------------------------------------------------------------
 
 const PRESETS = {
+  overcast: { // S3 OVERCAST MOODY — user-picked art direction (AAA realistic, no neon)
+    skyTop: 0x6f7e8c, skyBottom: 0xb2bcc5,
+    fogColor: 0x9aa5ae, fogDensity: 0.0018,
+    sunColor: 0xe9edf2, sunIntensity: 1.55, sunPos: [120, 380, 80],
+    hemiSky: 0x9dabb8, hemiGround: 0x5a5f66, hemiIntensity: 1.4,
+    stars: 0.0, lampIntensity: 0, windowGlow: 0.14, exposure: 1.05,
+    moonVisible: false, envStrip: 0x8f99a4,
+  },
   night: {
     skyTop: 0x070b1a, skyBottom: 0x1a2c52,   // bright horizon — "sky nahi dikhta" fix
     fogColor: 0x101a2e, fogDensity: 0.0034,
@@ -32,7 +40,7 @@ const PRESETS = {
   },
 };
 
-const TIME_ORDER = ['night', 'dusk', 'day'];
+const TIME_ORDER = ['overcast', 'night', 'dusk', 'day'];
 
 function lerp(a, b, t) { return a + (b - a) * t; }
 

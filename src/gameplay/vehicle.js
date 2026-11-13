@@ -282,17 +282,7 @@ export class GameVehicle {
     addBox(hlMat, 0.44, 0.13, 0.08, -0.62, 0.22, -(L / 2 + 0.02), false);
     this.tailMat = new THREE.MeshBasicMaterial({ color: P.tail });
     addBox(this.tailMat, W - 0.26, 0.11, 0.07, 0, 0.3, L / 2 + 0.02, false);
-
-    // underglow (fake light pool)
-    const glow = new THREE.Mesh(
-      new THREE.PlaneGeometry(W + 0.6, L + 0.5),
-      new THREE.MeshBasicMaterial({
-        color: P.glow, transparent: true, opacity: 0.30,
-        blending: THREE.AdditiveBlending, depthWrite: false,
-      }));
-    glow.rotation.x = -Math.PI / 2;
-    glow.position.y = -0.52;
-    g.add(glow);
+    // (neon underglow REMOVED — S3 realistic art direction)
 
     // headlight spots
     this.spots = [];

@@ -34,6 +34,16 @@ const TIERS = {
     viewDist: 150,
     far: 900, trafficCap: 8, aniso: 2, viewPad: 36,
   },
+  mobile: {
+    label: 'MOBILE',
+    pixelRatio: Math.min(window.devicePixelRatio || 1, 1.5),
+    shadowMapSize: 1024,
+    shadows: true,
+    bloom: 0,
+    maxLights: 14,
+    viewDist: 190,
+    far: 1400, trafficCap: 8, aniso: 2, viewPad: 36,
+  },
   g560: {
     label: 'G560 (max speed)',
     pixelRatio: 0.55,      // render at 55% resolution - huge win on old iGPUs
@@ -61,7 +71,7 @@ const TIERS = {
   },
 };
 
-const ORDER = ['emergency', 'g560', 'low', 'medium', 'high'];
+const ORDER = ['emergency', 'g560', 'low', 'mobile', 'medium', 'high'];
 
 export class QualityManager {
   constructor() {
@@ -99,8 +109,8 @@ export class QualityManager {
     const glInfo = QualityManager.detectSoftwareGL();
     this.glInfo = glInfo;
     if (glInfo.sw) this.tier = 'emergency';           // CPU rendering -> survival mode
-    else if (cores <= 2 || mem <= 2) this.tier = isSmallScreen ? 'low' : 'g560';
-    else if (isSmallScreen) this.tier = 'low';
+    else if (isSmallScreen) this.tier = 'mobile';     // touch phone — dedicated tier
+    else if (cores <= 2 || mem <= 2) this.tier = 'g560';
     else if (cores <= 4 || mem <= 4) this.tier = 'medium';
     this._ceil = this.tier;
     return this.apply();

@@ -6,31 +6,37 @@ const CSS = `
   #v-ui { position: fixed; inset: 0; pointer-events: none; z-index: 10;
     font-family: 'Segoe UI', system-ui, sans-serif; color: #e8eef7;
     -webkit-user-select: none; user-select: none; }
-  .v-panel { background: rgba(8, 12, 20, 0.55); border: 1px solid rgba(120, 180, 255, 0.18);
+  .v-panel { background: rgba(10, 12, 16, 0.5); border: 1px solid rgba(255, 255, 255, 0.13);
     border-radius: 10px; backdrop-filter: blur(6px); }
 
   /* ---------- start screen ---------- */
   #v-start { position: absolute; inset: 0; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; pointer-events: auto;
-    background: radial-gradient(ellipse at center, rgba(10,16,30,0.88) 0%, rgba(4,6,12,0.97) 75%); }
+    align-items: center; justify-content: flex-start; overflow-y: auto; padding: 18px 0;
+    pointer-events: auto;
+    background: radial-gradient(ellipse at center, rgba(16,18,22,0.9) 0%, rgba(5,6,8,0.97) 75%); }
+  #v-start .keys { margin-bottom: auto; }
+  @media (max-height: 320px) { #v-start .story, #v-start .keys, #v-start .byline { display: none; } }
   #v-start h1 { font-size: clamp(44px, 9vw, 96px); letter-spacing: 0.22em; font-weight: 800;
-    margin: 0; color: #eaf2ff; text-shadow: 0 0 28px rgba(90,140,255,0.8), 0 0 90px rgba(255,80,200,0.35); }
-  #v-start h1 span { color: #7fd7ff; }
+    margin: 0; margin-top: auto; color: #f4f6f9; text-shadow: 0 2px 16px rgba(0,0,0,0.6); }
+  #v-start h1 span { color: #9aa2ae; }
   #v-start .sub { margin-top: 6px; font-size: clamp(12px, 2vw, 17px); letter-spacing: 0.5em;
-    color: #9fb4d8; text-transform: uppercase; }
-  #v-start .story { max-width: 620px; text-align: center; margin: 26px 20px 8px; color: #c4d2e8;
+    color: #8b94a3; text-transform: uppercase; }
+  #v-start .story { max-width: 620px; text-align: center; margin: 26px 20px 8px; color: #c6ccd6;
     font-size: 14.5px; line-height: 1.65; }
   #v-play { pointer-events: auto; margin-top: 26px; padding: 15px 58px; font-size: 19px;
-    letter-spacing: 0.25em; font-weight: 700; color: #04101c; cursor: pointer;
-    background: linear-gradient(135deg, #6ee7ff, #4f8cff);
-    border: none; border-radius: 999px; box-shadow: 0 0 34px rgba(80,160,255,0.55);
+    letter-spacing: 0.25em; font-weight: 700; color: #14171c; cursor: pointer;
+    background: #e8eaef;
+    border: none; border-radius: 12px; box-shadow: 0 6px 24px rgba(0,0,0,0.45);
     transition: transform 0.12s ease, box-shadow 0.12s ease; }
-  #v-play:hover { transform: scale(1.05); box-shadow: 0 0 50px rgba(120,190,255,0.8); }
+  #v-play:hover { transform: scale(1.04); box-shadow: 0 8px 32px rgba(0,0,0,0.55); }
   #v-start .keys { display: flex; flex-wrap: wrap; gap: 8px 18px; justify-content: center;
     margin-top: 26px; max-width: 720px; padding: 0 16px; }
-  #v-start .key { background: rgba(20,30,48,0.7); border: 1px solid rgba(130,180,255,0.25);
-    border-radius: 8px; padding: 7px 12px; font-size: 12.5px; color: #b9c9e2; }
-  #v-start .key b { color: #7fd7ff; font-weight: 700; }
+  #v-start .key { background: rgba(18,20,26,0.7); border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 8px; padding: 7px 12px; font-size: 12.5px; color: #b9c0cc; }
+  #v-start .key b { color: #e8eaef; font-weight: 700; }
+  #v-start .byline { margin-top: 24px; font-size: 11.5px; letter-spacing: 0.42em; color: #7a8290;
+    text-transform: uppercase; }
+  #v-start .byline b { color: #c8cdd6; letter-spacing: 0.42em; }
 
   /* ---------- HUD ---------- */
   #v-hud { position: absolute; inset: 0; display: none; }
@@ -78,13 +84,13 @@ const CSS = `
   #v-hint b { color: #cfe4ff; }
   #v-prompt { position: absolute; bottom: 26%; left: 50%; transform: translateX(-50%);
     padding: 10px 24px; font-size: 15px; font-weight: 600; display: none; }
-  #v-prompt b { color: #7fd7ff; }
+  #v-prompt b { color: #ffd9a0; }
   #v-toasts { position: absolute; bottom: 34%; left: 50%; transform: translateX(-50%);
     display: flex; flex-direction: column; align-items: center; gap: 8px; }
   .v-toast { padding: 9px 26px; border-radius: 999px; font-size: 14.5px; font-weight: 600;
-    background: rgba(10, 18, 30, 0.82); border: 1px solid rgba(130,190,255,0.35);
-    color: #eaf6ff; animation: vpop 0.25s ease; text-align: center;
-    box-shadow: 0 0 18px rgba(80,160,255,0.22), inset 3px 0 0 rgba(110,231,255,0.8); }
+    background: rgba(12, 14, 18, 0.86); border: 1px solid rgba(255,255,255,0.2);
+    color: #f0f2f6; animation: vpop 0.25s ease; text-align: center;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.35), inset 3px 0 0 rgba(232,234,239,0.85); }
   .v-toast.gold { border-color: rgba(255,210,110,0.6); color: #ffe3a1;
     box-shadow: 0 0 24px rgba(255,190,80,0.25); }
   @keyframes vpop { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
@@ -105,28 +111,57 @@ const CSS = `
   #v-pause h2 { letter-spacing: 0.3em; font-size: 34px; color: #eaf2ff; margin-bottom: 26px; }
   #v-pause button { display: block; width: 260px; margin: 10px auto; padding: 13px;
     font-size: 15px; letter-spacing: 0.15em; color: #dcecff; cursor: pointer;
-    background: rgba(20, 32, 52, 0.8); border: 1px solid rgba(130,180,255,0.35);
+    background: rgba(24, 27, 33, 0.85); border: 1px solid rgba(255,255,255,0.18);
     border-radius: 10px; transition: background 0.12s; }
-  #v-pause button:hover { background: rgba(40, 70, 110, 0.9); }
+  #v-pause button:hover { background: rgba(44, 48, 56, 0.95); }
 
   /* ---------- touch controls ---------- */
   #v-touch { position: absolute; inset: 0; display: none; }
   #v-stick { position: absolute; left: 22px; bottom: 26px; width: 124px; height: 124px;
-    border-radius: 50%; background: rgba(20,30,48,0.35); border: 1px solid rgba(130,180,255,0.3);
-    pointer-events: auto; }
+    border-radius: 50%; background: rgba(12,14,18,0.35); border: 1px solid rgba(255,255,255,0.22);
+    pointer-events: auto; touch-action: none; }
   #v-stick .nub { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px;
-    border-radius: 50%; background: rgba(127,215,255,0.45); transform: translate(-50%, -50%); }
+    border-radius: 50%; background: rgba(232,234,239,0.38); transform: translate(-50%, -50%); }
   .v-tbtn { position: absolute; pointer-events: auto; border-radius: 50%;
-    background: rgba(20,32,52,0.55); border: 1px solid rgba(130,180,255,0.4);
-    color: #cfe4ff; font-weight: 700; display: flex; align-items: center; justify-content: center;
-    font-size: 13px; letter-spacing: 0.06em; }
+    background: rgba(12,14,18,0.45); border: 1px solid rgba(255,255,255,0.22);
+    color: #e8ecf2; font-weight: 700; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; letter-spacing: 0.06em; touch-action: none; -webkit-tap-highlight-color: transparent; }
   #v-tbtn-a { right: 24px; bottom: 160px; width: 74px; height: 74px; }
   #v-tbtn-e { right: 112px; bottom: 66px; width: 64px; height: 64px; }
   #v-tbtn-h { right: 24px; bottom: 66px; width: 60px; height: 60px; font-size: 20px; }
-  #v-tbtn-f { right: 118px; bottom: 160px; width: 78px; height: 78px; background: rgba(120,32,32,0.6);
-    border-color: rgba(255,120,120,0.5); font-size: 14px; }
+  #v-tbtn-f { right: 118px; bottom: 160px; width: 78px; height: 78px; background: rgba(120,32,32,0.55);
+    border-color: rgba(255,140,140,0.4); font-size: 14px; }
   #v-tbtn-aim { right: 24px; bottom: 252px; width: 58px; height: 58px; font-size: 20px; }
   #v-tbtn-w { right: 112px; bottom: 252px; width: 50px; height: 50px; font-size: 18px; }
+
+  /* ---------- driving pads (mode: car) ---------- */
+  #v-drive { position: absolute; inset: 0; display: none; }
+  .v-pad { position: absolute; pointer-events: auto; border-radius: 16px;
+    background: rgba(12,14,18,0.38); border: 1px solid rgba(255,255,255,0.22);
+    color: #e8ecf2; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 15px; letter-spacing: 0.1em; touch-action: none;
+    -webkit-tap-highlight-color: transparent; transition: background 0.06s, border-color 0.06s; }
+  .v-pad.on { background: rgba(232,234,239,0.28); border-color: rgba(255,255,255,0.5); }
+  .v-pad svg { opacity: 0.92; }
+  #v-pad-sl { left: calc(16px + env(safe-area-inset-left, 0px)); bottom: 22px; width: 116px; height: 116px; }
+  #v-pad-sr { left: calc(144px + env(safe-area-inset-left, 0px)); bottom: 22px; width: 116px; height: 116px; }
+  #v-pad-gas { right: calc(16px + env(safe-area-inset-right, 0px)); bottom: 22px; width: 112px; height: 128px;
+    background: rgba(28,58,36,0.45); border-color: rgba(150,220,175,0.35); }
+  #v-pad-gas.on { background: rgba(90,190,120,0.35); }
+  #v-pad-brk { right: calc(140px + env(safe-area-inset-right, 0px)); bottom: 22px; width: 100px; height: 96px;
+    background: rgba(90,26,26,0.45); border-color: rgba(255,150,150,0.35); font-size: 13px; }
+  #v-pad-brk.on { background: rgba(220,80,80,0.35); }
+  #v-pad-hb { right: calc(16px + env(safe-area-inset-right, 0px)); bottom: 162px; width: 112px; height: 50px; font-size: 11px; }
+  #v-pad-ex { right: calc(16px + env(safe-area-inset-right, 0px)); top: calc(14px + env(safe-area-inset-top, 0px));
+    width: 74px; height: 44px; font-size: 11px; }
+  #v-pad-horn { right: calc(102px + env(safe-area-inset-right, 0px)); top: calc(14px + env(safe-area-inset-top, 0px));
+    width: 52px; height: 44px; font-size: 16px; }
+
+  @media (pointer: coarse) {
+    #v-speedo .kmh { font-size: 42px; }
+    #v-speedo { width: 170px; }
+    #v-minimap { width: 96px; height: 96px; }
+  }
 
   /* ---------- weapon HUD ---------- */
   #v-weapon { position: absolute; right: 22px; bottom: 20px; width: 190px; padding: 0;
@@ -137,9 +172,9 @@ const CSS = `
   #v-weapon .wslots { display: flex; gap: 5px; justify-content: flex-end; margin-top: 5px; }
   #v-weapon .wslot { width: 22px; height: 20px; border-radius: 5px; font-size: 11px; font-weight: 700;
     display: flex; align-items: center; justify-content: center;
-    background: rgba(255,255,255,0.08); color: #7d92b5; border: 1px solid rgba(130,180,255,0.18); }
-  #v-weapon .wslot.on { background: rgba(110,231,255,0.22); color: #dff6ff;
-    border-color: rgba(110,231,255,0.55); }
+    background: rgba(255,255,255,0.08); color: #8b94a3; border: 1px solid rgba(255,255,255,0.16); }
+  #v-weapon .wslot.on { background: rgba(232,234,239,0.22); color: #ffffff;
+    border-color: rgba(255,255,255,0.55); }
   #v-weapon .wammo { font-size: 21px; font-weight: 800; margin-top: 4px; color: #ffe9c2;
     font-variant-numeric: tabular-nums; text-shadow: 0 2px 8px rgba(0,0,0,0.85); }
   #v-weapon .wammo .res { font-size: 13px; color: #9fb4d8; font-weight: 600; }
@@ -175,11 +210,12 @@ export class UI {
         <h1>VELARA<span>.</span></h1>
         <div class="sub">City of Shadows</div>
         <div class="story">
-          Welcome to <b>VELARA</b> — a rain-soaked neon metropolis where every
-          crash, drift and bullet obeys real physics. Tonight your story begins:
+          Welcome to <b>VELARA</b> — a moody overcast city where every
+          crash, drift and bullet obeys real physics. Today your story begins:
           money to earn, machines to master, and a city to shake.
         </div>
         <button id="v-play">PLAY</button>
+        <div class="byline">A GAME BY <b>PRIYANSH</b></div>
         <div class="keys">
           <div class="key"><b>W A S D</b> — Move / Drive</div>
           <div class="key"><b>Shift</b> — Sprint</div>
@@ -248,6 +284,15 @@ export class UI {
       </div>
 
       <div id="v-touch">
+        <div id="v-drive">
+          <div class="v-pad" id="v-pad-sl"><svg viewBox="0 0 24 24" width="46" height="46" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></div>
+          <div class="v-pad" id="v-pad-sr"><svg viewBox="0 0 24 24" width="46" height="46" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></div>
+          <div class="v-pad" id="v-pad-gas">GAS</div>
+          <div class="v-pad" id="v-pad-brk">BRAKE</div>
+          <div class="v-pad" id="v-pad-hb">HANDBRAKE</div>
+          <div class="v-pad" id="v-pad-horn">📣</div>
+          <div class="v-pad" id="v-pad-ex">EXIT</div>
+        </div>
         <div id="v-stick"><div class="nub"></div></div>
         <div class="v-tbtn" id="v-tbtn-a">JUMP</div>
         <div class="v-tbtn" id="v-tbtn-e">E</div>
@@ -297,11 +342,29 @@ export class UI {
     this.$('v-restart').addEventListener('click', () => hooks.onRestart());
 
     this.isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+    this.touchMode = 'foot';
     if (this.isTouch) {
       this.touchEl.style.display = 'block';
       this.touchEl.style.pointerEvents = 'none';
       this._setupTouch();
+      this.setTouchMode('foot');
     }
+  }
+
+  /** Driving mode = steering pads + pedals; foot mode = joystick + action buttons. */
+  setTouchMode(mode) {
+    if (!this.isTouch) return;
+    this.touchMode = mode;
+    const car = mode === 'car';
+    const drive = this.$('v-drive');
+    if (drive) drive.style.display = car ? 'block' : 'none';
+    for (const id of ['v-stick', 'v-tbtn-a', 'v-tbtn-e', 'v-tbtn-h', 'v-tbtn-f', 'v-tbtn-aim', 'v-tbtn-w']) {
+      const el = this.$(id);
+      if (el) el.style.display = car ? 'none' : '';
+    }
+    // mode switch par stale input reset
+    this.stick = { x: 0, y: 0 };
+    this.pad = { sl: 0, sr: 0, gas: 0, brk: 0, hb: 0 };
   }
 
   showStart() { this.startEl.style.display = 'flex'; }
@@ -475,19 +538,19 @@ export class UI {
     if (data.vehicles) {
       for (const v of data.vehicles) {
         const [mx, mz] = toMap(v.x, v.z);
-        c.fillStyle = '#6ee7ff';
+        c.fillStyle = '#f0e6c8';
         c.beginPath(); c.arc(mx, mz, v.active ? 7 : 4.5, 0, Math.PI * 2); c.fill();
         if (v.active) {
-          c.strokeStyle = 'rgba(110,231,255,0.5)';
+          c.strokeStyle = 'rgba(240,230,200,0.5)';
           c.lineWidth = 2;
           c.beginPath(); c.arc(mx, mz, 12, 0, Math.PI * 2); c.stroke();
         }
       }
     } else if (car) {
       const [mx, mz] = toMap(car.x, car.z);
-      c.fillStyle = '#6ee7ff';
+      c.fillStyle = '#f0e6c8';
       c.beginPath(); c.arc(mx, mz, 7, 0, Math.PI * 2); c.fill();
-      c.strokeStyle = 'rgba(110,231,255,0.5)';
+      c.strokeStyle = 'rgba(240,230,200,0.5)';
       c.lineWidth = 2;
       c.beginPath(); c.arc(mx, mz, 12, 0, Math.PI * 2); c.stroke();
     }
@@ -551,6 +614,39 @@ export class UI {
     bind('v-tbtn-f', 'f');
     bind('v-tbtn-aim', 'aim');
     bind('v-tbtn-w', 'w');
+
+    // ---- driving pads (car mode) ----
+    this.pad = { sl: 0, sr: 0, gas: 0, brk: 0, hb: 0 };
+    const padBind = (id, key) => {
+      const el = this.$(id);
+      el.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        this.pad[key] = 1; el.classList.add('on');
+      }, { passive: false });
+      const off = (e) => {
+        e.preventDefault();
+        this.pad[key] = 0; el.classList.remove('on');
+      };
+      el.addEventListener('touchend', off, { passive: false });
+      el.addEventListener('touchcancel', off, { passive: false });
+    };
+    padBind('v-pad-sl', 'sl');
+    padBind('v-pad-sr', 'sr');
+    padBind('v-pad-gas', 'gas');
+    padBind('v-pad-brk', 'brk');
+    padBind('v-pad-hb', 'hb');
+    // horn: repeat-fire style press
+    const hornBtn = this.$('v-pad-horn');
+    hornBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault(); hornBtn.classList.add('on'); this.hooks.onTouchBtn('h', true);
+    }, { passive: false });
+    const hornOff = (e) => { e.preventDefault(); hornBtn.classList.remove('on'); this.hooks.onTouchBtn('h', false); };
+    hornBtn.addEventListener('touchend', hornOff, { passive: false });
+    hornBtn.addEventListener('touchcancel', hornOff, { passive: false });
+    // exit vehicle (toggle)
+    this.$('v-pad-ex').addEventListener('touchstart', (e) => {
+      e.preventDefault(); this.hooks.onTouchBtn('e', true);
+    }, { passive: false });
   }
 }
 

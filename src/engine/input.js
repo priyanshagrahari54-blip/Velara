@@ -123,18 +123,21 @@ export class InputManager {
     };
   }
 
-  /** Combined drive input: keys + virtual stick. */
+  /** Combined drive input: keys + virtual stick + touch driving pads. */
   driveInput(touchAction) {
     const k = this.keys;
     const stick = this.getStickValue();
+    const pad = this.getPadValue();
     const clamp = (v) => Math.max(-1, Math.min(1, v));
     return {
-      throttle: clamp(((k.KeyW || k.ArrowUp) ? 1 : 0) - ((k.KeyS || k.ArrowDown) ? 1 : 0) - stick.y),
-      steer: clamp(((k.KeyA || k.ArrowLeft) ? 1 : 0) - ((k.KeyD || k.ArrowRight) ? 1 : 0) + stick.x),
-      handbrake: !!(k.Space || touchAction),
+      throttle: clamp(((k.KeyW || k.ArrowUp) ? 1 : 0) - ((k.KeyS || k.ArrowDown) ? 1 : 0) - stick.y + pad.gas - pad.brk),
+      steer: clamp(((k.KeyA || k.ArrowLeft) ? 1 : 0) - ((k.KeyD || k.ArrowRight) ? 1 : 0) + stick.x + (pad.sl || 0) - (pad.sr || 0)),
+      handbrake: !!(k.Space || touchAction || pad.hb),
     };
   }
 
   getStickValue() { return this._getStick ? this._getStick() : { x: 0, y: 0 }; }
   bindStick(getter) { this._getStick = getter; }
+  getPadValue() { return this._getPad ? this._getPad() : { sl: 0, sr: 0, gas: 0, brk: 0, hb: 0 }; }
+  bindPad(getter) { this._getPad = getter; }
 }

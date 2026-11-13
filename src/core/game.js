@@ -42,7 +42,7 @@ export class VelaraGame {
     this.pickupsCollected = 0;
     this.cratesDestroyed = 0;
     this.rangeHits = 0;
-    this.gameMinutes = 17 * 60 + 35; // golden hour start (Style B)
+    this.gameMinutes = 14 * 60 + 25; // overcast afternoon start (Style S3)
     this._flipTimer = 0;
     this._touchJump = false;
     this._touchHorn = false;
@@ -87,7 +87,7 @@ export class VelaraGame {
 
     // -------------------------------------------------------- world
     this.env = createEnvironment(this.scene, this.renderer);
-    this.env.setTime('dusk'); // boot into GOLDEN HOUR with a cinematic 2.5s transition
+    this.env.setTime('overcast'); // boot into S3 OVERCAST MOODY with a cinematic 2.5s transition
     this.city = buildCity(this.scene, this.world, { profile: this.profile });
     this.player = new Player(this.scene, this.world, this.city.groundMat, PLAYER_SPAWN);
     this.world.addContactMaterial(new CANNON.ContactMaterial(
@@ -142,6 +142,7 @@ export class VelaraGame {
       onZoom: (dir) => this.cameraRig.zoom(dir),
     });
     this.input.bindStick(() => this.ui.stick || { x: 0, y: 0 });
+    this.input.bindPad(() => this.ui.pad || { sl: 0, sr: 0, gas: 0, brk: 0, hb: 0 });
     this.cameraRig = new CameraRig(this.camera, {
       player: this.player,
       car: this.activeVehicle,
@@ -171,7 +172,9 @@ export class VelaraGame {
 
     this.ui.setMoney(0);
     this.ui.setHealth(100);
-    this.ui.setHint('<b>WASD</b> move · <b>RMB</b> aim · <b>LMB</b> fire · <b>1/2/3</b> weapons · <b>E</b> vehicle · <b>K</b> quality');
+    this.ui.setHint(this.ui.isTouch
+      ? '<b>Stick</b> se chalo · <b>ENTER</b> button se gaadi · <b>FIRE</b> se shooting'
+      : '<b>WASD</b> move · <b>RMB</b> aim · <b>LMB</b> fire · <b>1/2/3</b> weapons · <b>E</b> vehicle · <b>K</b> quality');
 
     this.clock = new THREE.Clock();
     this._loop = this._loop.bind(this);
@@ -387,7 +390,7 @@ export class VelaraGame {
     if (this.mode === 'foot') {
       const v = this.nearestVehicle();
       if (!v) {
-        this.ui.toast('No vehicle nearby — follow the cyan dots');
+        this.ui.toast('No vehicle nearby — follow the map dots');
         return;
       }
       this.activeVehicle = v;
@@ -402,6 +405,7 @@ export class VelaraGame {
       this.ui.showSpeedo(true);
       this.ui.showWeapon(false);
       this.ui.setCrosshair(0, false);
+      if (this.ui.setTouchMode) this.ui.setTouchMode('car');
       this.ui.toast(`🔑 ${v.preset.name} — ${v.preset.desc}`, false, 2200);
       this.cameraRig.dist = 8.2;
     } else {
@@ -415,6 +419,7 @@ export class VelaraGame {
       this.weapons._syncUI();
       this.ui.showSpeedo(false);
       this.ui.showWeapon(true);
+      if (this.ui.setTouchMode) this.ui.setTouchMode('foot');
       this.cameraRig.dist = 4.6;
     }
   }
