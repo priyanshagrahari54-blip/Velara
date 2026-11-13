@@ -566,10 +566,11 @@ export class GameVehicle {
     }
 
     // REMASTER: weight transfer — brake dive / throttle squat (suspension feel)
+    // NOTE: subtle rakhna hai — zyada torque front wheels unload karta (wheelspin)
     {
       const accelFs = (engine !== 0 ? Math.sign(engine) : 0) - (brake > 6 && Math.abs(fs) > 2 ? Math.sign(fs) : 0);
       if (accelFs !== 0) {
-        const k = 420 * massK;
+        const k = 130 * massK;
         this.body.applyTorque(new CANNON.Vec3(accelFs * k, 0, 0));
       }
     }
