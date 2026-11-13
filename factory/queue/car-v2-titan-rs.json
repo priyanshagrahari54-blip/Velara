@@ -5,8 +5,9 @@
   "titan-rs"
  ],
  "brief": "titan-rs v2 REBAKE-FREE \u2014 paint material + vertex-AO (black-texture bug fix)",
- "status": "pending",
+ "status": "done",
  "priority": 1,
  "result": "factory/out/titan-rs.glb",
- "worker": null
+ "worker": "actions-cpu",
+ "claimed": 1794581772
 }
