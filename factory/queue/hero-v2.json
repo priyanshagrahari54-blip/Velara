@@ -3,9 +3,9 @@
  "script": "make-hero-v2.py",
  "args": [],
  "brief": "Hero character v2 \u2014 smooth joint-pivot humanoid, olive bomber concept (user-picked ref #2), GLB+FBX",
- "status": "failed",
+ "status": "running",
  "priority": 1,
  "worker": "w0",
  "result": "factory/out/hero-v2.glb",
- "claimed": 1794664819
+ "claimed": 1794666023
 }
