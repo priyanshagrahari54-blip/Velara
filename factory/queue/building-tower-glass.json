@@ -5,7 +5,7 @@
   "tower-glass"
  ],
  "brief": "HI-DETAIL tower ~30k+ tris \u2014 curtain cells, corner columns, roof clutter, lobby (UE-track)",
- "status": "running",
+ "status": "done",
  "priority": 1,
  "result": "factory/out/tower-glass.glb",
  "worker": "w3",
