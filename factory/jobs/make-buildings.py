@@ -41,6 +41,7 @@ PRESET = argv[0] if argv else "tower-glass"
 assert PRESET in PRESETS, f"unknown preset {PRESET}"
 P = dict(PRESETS[PRESET])
 GLB = os.path.join(OUT, f"{PRESET}.glb")
+FBX = os.path.join(OUT, f"{PRESET}.fbx")
 PNG = os.path.join(OUT, f"{PRESET}_preview.png")
 
 R = {"job": f"building-{PRESET}", "steps": [], "cfg": {"preset": PRESET}}
@@ -112,63 +113,146 @@ def cyl(parts, mat, r0, r1, h, px, py, pz, seg=12):
 
 # ================================================================ BUILDERS
 def build_tower(parts, M, rng):
+    # HI-DETAIL (v0.6.2 UE-track): ~30k+ tris — har window cell me frame
+    # (jambs/head/sill) + recess glass, corner columns, roof clutter, lobby
     W, D, H = 16.0, 16.0, 42.0
     floors = 12
     fh = H / floors
+    cols = 10                     # curtain-wall module ~1.6m
+    cw = W / cols
     # main glass volume
     box(parts, M["glass"], W, H, D, 0, 0, 0)
-    # floor slabs (protruding trim) + mullions har face par
+    # floor slabs (protruding trim)
     for i in range(floors + 1):
         z = -H / 2 + i * fh
         box(parts, M["trim"], W + 0.5, 0.28, D + 0.5, 0, z, 0)
-    for x in [-W / 2 + 2, 0, W / 2 - 2]:
-        box(parts, M["trim"], 0.16, H, 0.16, x, 0, D / 2 + 0.05)
-        box(parts, M["trim"], 0.16, H, 0.16, x, 0, -D / 2 - 0.05)
-    for y in [-D / 2 + 2, 0, D / 2 - 2]:
-        box(parts, M["trim"], 0.16, H, 0.16, W / 2 + 0.05, 0, y)
-        box(parts, M["trim"], 0.16, H, 0.16, -W / 2 - 0.05, 0, y)
-    # parapet + roof props
-    box(parts, M["trim"], W + 0.4, 0.9, 0.25, 0, H / 2 + 0.45, D / 2)
-    box(parts, M["trim"], W + 0.4, 0.9, 0.25, 0, H / 2 + 0.45, -D / 2)
-    box(parts, M["trim"], 0.25, 0.9, D + 0.4, W / 2, H / 2 + 0.45, 0)
-    box(parts, M["trim"], 0.25, 0.9, D + 0.4, -W / 2, H / 2 + 0.45, 0)
-    cyl(parts, M["metal"], 1.4, 1.4, 2.6, W / 2 - 3, H / 2 + 1.3, 0, seg=10)
-    box(parts, M["metal"], 1.8, 1.0, 1.4, -W / 2 + 3, H / 2 + 0.5, 2.5)
-    box(parts, M["metal"], 1.8, 1.0, 1.4, -W / 2 + 3, H / 2 + 0.5, -2.5)
-    # entrance canopy + lobby strip (front = +Z face)
+    # curtain wall cells: 4 faces (fx/fz normal, off = half-extent us axis ka)
+    faces = [(0, 1, D / 2), (0, -1, D / 2), (1, 0, W / 2), (-1, 0, W / 2)]
+    for fx, fz, off in faces:
+        for c in range(cols + 1):           # mullion verticals
+            t = -W / 2 + c * cw
+            if fx == 0:
+                box(parts, M["trim"], 0.14, H, 0.16, t, 0, fz * (off + 0.05))
+            else:
+                box(parts, M["trim"], 0.16, H, 0.14, fx * (off + 0.05), 0, t)
+        for i in range(floors):             # per-cell: recess + head + sill + jambs
+            z = -H / 2 + (i + 0.5) * fh
+            for c in range(cols):
+                t = -W / 2 + (c + 0.5) * cw
+                hw = cw / 2 - 0.08
+                if fx == 0:
+                    box(parts, M["lobby"], cw - 0.16, fh - 0.55, 0.06, t, z, fz * (off - 0.05))
+                    box(parts, M["trim"], hw * 2, 0.1, 0.12, t, z + fh / 2 - 0.14, fz * (off + 0.02))
+                    box(parts, M["trim"], hw * 2, 0.16, 0.16, t, z - fh / 2 + 0.16, fz * (off + 0.03))
+                    box(parts, M["trim"], 0.09, fh - 0.55, 0.12, t - hw, z, fz * (off + 0.02))
+                    box(parts, M["trim"], 0.09, fh - 0.55, 0.12, t + hw, z, fz * (off + 0.02))
+                else:
+                    box(parts, M["lobby"], 0.06, fh - 0.55, cw - 0.16, fx * (off - 0.05), z, t)
+                    box(parts, M["trim"], 0.12, 0.1, hw * 2, fx * (off + 0.02), z + fh / 2 - 0.14, t)
+                    box(parts, M["trim"], 0.16, 0.16, hw * 2, fx * (off + 0.03), z - fh / 2 + 0.16, t)
+                    box(parts, M["trim"], 0.12, fh - 0.55, 0.09, fx * (off + 0.02), z, t - hw)
+                    box(parts, M["trim"], 0.12, fh - 0.55, 0.09, fx * (off + 0.02), z, t + hw)
+    # corner columns
+    for sx in (-1, 1):
+        for sz in (-1, 1):
+            box(parts, M["trim"], 0.7, H, 0.7, sx * (W / 2 + 0.15), 0, sz * (D / 2 + 0.15))
+    # parapet + coping
+    for (sx, sz, bw, bd) in [(0, 1, W + 0.4, 0.25), (0, -1, W + 0.4, 0.25), (1, 0, 0.25, D + 0.4), (-1, 0, 0.25, D + 0.4)]:
+        box(parts, M["trim"], bw, 0.9, bd, sx * (W / 2 if sx else 0), H / 2 + 0.45, sz * (D / 2 if sz else 0))
+        box(parts, M["metal"], bw + 0.12 if bw > 1 else bw, 0.14, bd + 0.12 if bd > 1 else bd,
+            sx * (W / 2 if sx else 0), H / 2 + 0.95, sz * (D / 2 if sz else 0))
+    # roof: water tank + legs + cap
+    tx, tz = W / 2 - 3.0, -1.5
+    cyl(parts, M["metal"], 1.4, 1.4, 2.6, tx, H / 2 + 1.8, tz, seg=24)
+    cyl(parts, M["metal"], 1.48, 1.48, 0.18, tx, H / 2 + 3.2, tz, seg=24)
+    for lx, lz in [(-0.9, -0.9), (0.9, -0.9), (-0.9, 0.9), (0.9, 0.9)]:
+        box(parts, M["metal"], 0.12, 0.6, 0.12, tx + lx, H / 2 + 0.3, tz + lz)
+    # AC units with grill slats
+    for k in range(4):
+        ax = -W / 2 + 3 + (k % 2) * 4.5
+        az = -D / 2 + 3.5 + (k // 2) * 5.5
+        box(parts, M["metal"], 1.8, 1.0, 1.4, ax, H / 2 + 0.5, az)
+        for s in range(6):
+            box(parts, M["trim"], 1.5, 0.07, 0.09, ax, H / 2 + 0.85, az - 0.55 + s * 0.22)
+    # mast + dishes + vents
+    cyl(parts, M["metal"], 0.09, 0.14, 6.0, -W / 2 + 2, H / 2 + 3.0, D / 2 - 2.5, seg=12)
+    box(parts, M["metal"], 0.9, 0.6, 0.08, -W / 2 + 2.6, H / 2 + 4.4, D / 2 - 2.5)
+    for vx, vz in [(-5, -4.2), (5, -4.2), (-5, 4.2)]:
+        cyl(parts, M["trim"], 0.2, 0.27, 1.0, vx, H / 2 + 0.5, vz, seg=12)
+    # entrance: canopy + rods + pilasters + lobby glass + steps (front +Z)
     box(parts, M["trim"], 7.0, 0.35, 2.6, 0, -H / 2 + 3.2, D / 2 + 1.1)
+    for rx in (-3.0, 3.0):
+        cyl(parts, M["metal"], 0.06, 0.06, 3.0, rx, -H / 2 + 1.6, D / 2 + 2.0, seg=8)
     box(parts, M["lobby"], 6.0, 6.0, 0.15, 0, -H / 2 + 3.0, D / 2 + 0.02)
+    for px in (-3.4, 3.4):
+        box(parts, M["trim"], 0.5, 6.4, 0.4, px, -H / 2 + 3.2, D / 2 + 0.1)
+    box(parts, M["concrete2"], 8.0, 0.24, 1.0, 0, -H / 2 - 0.12, D / 2 + 1.4)
+    box(parts, M["concrete2"], 6.4, 0.24, 0.6, 0, -H / 2 - 0.34, D / 2 + 1.8)
     return W, D, H
 
 
 def build_midrise(parts, M, rng):
+    # HI-DETAIL: window jambs har floor, baluster-wali balconies, string
+    # courses, pilasters, cornice, roof clutter — ~20k+ tris
     W, D, H = 18.0, 14.0, 22.0
     floors = 6
     fh = H / floors
     box(parts, M["concrete"], W, H, D, 0, 0, 0)
-    # stairwell strip
+    # stairwell strip + roof-box
     box(parts, M["concrete2"], 3.2, H + 0.3, 0.35, -W / 2 + 2.2, 0, D / 2 + 0.1)
-    # windows + ledges har floor (front + back)
+    box(parts, M["concrete2"], 3.4, 0.6, 1.6, -W / 2 + 2.2, H / 2 + 0.3, D / 2 - 0.6)
+    # pilasters (front corners + mid)
+    for px in (-W / 2 + 0.45, W / 2 - 0.45, -1.5, 3.8):
+        box(parts, M["concrete2"], 0.55, H, 0.28, px, 0, D / 2 + 0.06)
     for i in range(floors):
         z = -H / 2 + (i + 0.5) * fh
-        box(parts, M["trim"], W + 0.3, 0.2, D + 0.3, 0, z - fh / 2 + 0.1, 0)
+        # string course (front + back)
+        box(parts, M["trim"], W + 0.35, 0.2, D + 0.35, 0, z - fh / 2 + 0.1, 0)
+        # windows (front + back): jambs + head + sill + glass inset
         for wx in [-5.5, -1.2, 3.1]:
-            box(parts, M["frame"], 2.1, 1.5, 0.12, wx, z, D / 2 + 0.06)
-            box(parts, M["frame"], 2.1, 1.5, 0.12, wx, z, -D / 2 - 0.06)
-        # balconies front par (2 floors ko chhod kar)
-        if i % 2 == 1 and wx is not None:
-            for bx in [-3.4, 1.6]:
-                box(parts, M["trim"], 2.8, 0.18, 1.1, bx, z - fh / 2 + 0.05, D / 2 + 0.5)
-                box(parts, M["rail"], 2.8, 0.9, 0.08, bx, z - fh / 2 + 0.5, D / 2 + 1.0)
-                box(parts, M["rail"], 0.08, 0.9, 1.05, bx - 1.36, z - fh / 2 + 0.5, D / 2 + 0.5)
-                box(parts, M["rail"], 0.08, 0.9, 1.05, bx + 1.36, z - fh / 2 + 0.5, D / 2 + 0.5)
-    # parapet + AC
+            for sgn in (1, -1):
+                zf = sgn * (D / 2 + 0.06)
+                box(parts, M["frame"], 2.1, 1.5, 0.12, wx, z, zf)
+                box(parts, M["trim"], 2.3, 0.14, 0.18, wx, z + 0.8, zf + sgn * 0.02)
+                box(parts, M["trim"], 2.35, 0.16, 0.22, wx, z - 0.8, zf + sgn * 0.03)
+        # side windows (left + right)
+        for wz in (-4.5, 0, 4.5):
+            for sgn in (1, -1):
+                xf = sgn * (W / 2 + 0.06)
+                box(parts, M["frame"], 0.12, 1.5, 2.1, xf, z, wz)
+                box(parts, M["trim"], 0.22, 0.16, 2.35, xf + sgn * 0.03, z - 0.8, wz)
+        # balconies front par (alternate floors) — slab + balusters + rails
+        if i % 2 == 1:
+            for bx in (-4.6, 1.6):
+                box(parts, M["trim"], 3.2, 0.18, 1.15, bx, z - fh / 2 + 0.05, D / 2 + 0.52)
+                box(parts, M["rail"], 3.2, 0.09, 0.09, bx, z - fh / 2 + 0.92, D / 2 + 1.04)
+                for b in range(13):
+                    box(parts, M["rail"], 0.07, 0.72, 0.07, bx - 1.5 + b * 0.25,
+                        z - fh / 2 + 0.49, D / 2 + 1.04)
+                box(parts, M["rail"], 0.09, 0.92, 0.09, bx - 1.58, z - fh / 2 + 0.5, D / 2 + 0.55)
+                box(parts, M["rail"], 0.09, 0.92, 0.09, bx + 1.58, z - fh / 2 + 0.5, D / 2 + 0.55)
+                for br in (-1.2, 1.2):
+                    box(parts, M["trim"], 0.14, 0.14, 0.7, bx + br, z - fh / 2 - 0.02, D / 2 + 0.25)
+    # cornice 2-layer + parapet
+    box(parts, M["trim"], W + 0.5, 0.35, D + 0.5, 0, H / 2 - 0.2, 0)
     box(parts, M["trim"], W + 0.3, 0.7, 0.2, 0, H / 2 + 0.35, D / 2)
-    box(parts, M["metal"], 1.6, 0.9, 1.2, W / 2 - 3, H / 2 + 0.45, 0)
+    box(parts, M["trim"], 0.2, 0.7, D + 0.3, W / 2, H / 2 + 0.35, 0)
+    box(parts, M["trim"], 0.2, 0.7, D + 0.3, -W / 2, H / 2 + 0.35, 0)
+    # roof: tank + 3 AC (grills) + vents
+    cyl(parts, M["metal"], 1.0, 1.0, 1.9, W / 2 - 2.5, H / 2 + 0.95, -D / 2 + 2.5, seg=20)
+    for k in range(3):
+        ax = -W / 2 + 3 + k * 3.6
+        box(parts, M["metal"], 1.6, 0.9, 1.2, ax, H / 2 + 0.45, D / 2 - 2.2)
+        for s in range(5):
+            box(parts, M["trim"], 1.3, 0.06, 0.08, ax, H / 2 + 0.75, D / 2 - 2.75 + s * 0.28)
+    for vx in (-6, 6):
+        cyl(parts, M["trim"], 0.18, 0.24, 0.9, vx, H / 2 + 0.45, 0, seg=12)
     return W, D, H
 
 
 def build_shop(parts, M, rng, enterable=False):
+    # HI-DETAIL: shopfront mullion grid, awning ribs + valance, framed upper
+    # windows, cornice, roof clutter; enterable me shelf ITEMS bhi
     W, D, H = 16.0, 12.0, 7.0
     # neeche 3.4 shopfront, upar residential mass
     shopH = 3.4
@@ -185,18 +269,52 @@ def build_shop(parts, M, rng, enterable=False):
     for gx0, gx1 in glassSpans:
         gw = gx1 - gx0
         if gw > 0.3:
-            box(parts, M["shopglass"], gw, shopH - 0.9, 0.1, (gx0 + gx1) / 2, shopH / 2 + 0.2, D / 2 + 0.05)
-    # awning (angled nahi — flat slab look, colored)
-    box(parts, M["awning"], W - 1.0, 0.22, 1.5, 0, shopH + 0.15, D / 2 + 0.7)
-    # sign board + lit strip
+            gcx = (gx0 + gx1) / 2
+            box(parts, M["shopglass"], gw, shopH - 0.9, 0.1, gcx, shopH / 2 + 0.2, D / 2 + 0.05)
+            # mullion grid: verticals har ~1.6m + 2 transoms
+            nm = max(1, int(gw / 1.6))
+            for m in range(1, nm):
+                box(parts, M["frame"], 0.09, shopH - 0.9, 0.14,
+                    gx0 + gw * m / nm, shopH / 2 + 0.2, D / 2 + 0.09)
+            for ty in (1.1, 2.2):
+                box(parts, M["frame"], gw, 0.09, 0.14, gcx, ty, D / 2 + 0.09)
+    if enterable:
+        # door frame + kick plates
+        box(parts, M["frame"], 0.22, 3.0, 0.34, -doorW / 2 - 0.08, 1.5, D / 2 + 0.1)
+        box(parts, M["frame"], 0.22, 3.0, 0.34, doorW / 2 + 0.08, 1.5, D / 2 + 0.1)
+        box(parts, M["frame"], doorW + 0.5, 0.24, 0.34, 0, 3.05, D / 2 + 0.1)
+    # awning: slab + ribs + valance (colored)
+    aw = W - 1.0
+    box(parts, M["awning"], aw, 0.22, 1.5, 0, shopH + 0.15, D / 2 + 0.7)
+    for r in range(9):
+        box(parts, M["trim"], 0.1, 0.26, 1.62, -aw / 2 + 0.6 + r * (aw - 1.2) / 8,
+            shopH + 0.17, D / 2 + 0.72)
+    box(parts, M["awning"], aw, 0.3, 0.08, 0, shopH - 0.02, D / 2 + 1.42)
+    # sign board + lit strip + side returns
     box(parts, M["sign"], W - 2.0, 0.9, 0.25, 0, shopH + 0.95, D / 2 + 0.12)
     box(parts, M["signglow"], W - 2.6, 0.28, 0.06, 0, shopH + 0.95, D / 2 + 0.28)
-    # upper windows + ledges
-    for wx in [-4.5, 0, 4.5]:
+    box(parts, M["sign"], 0.25, 0.9, 0.9, -W / 2 + 0.95, shopH + 0.95, D / 2 + 0.35)
+    box(parts, M["sign"], 0.25, 0.9, 0.9, W / 2 - 0.95, shopH + 0.95, D / 2 + 0.35)
+    # upper windows + ledges (framed)
+    for wx in (-4.5, 0, 4.5):
         box(parts, M["frame"], 1.9, 1.4, 0.12, wx, shopH + upH / 2, D / 2 + 0.06)
+        box(parts, M["trim"], 2.15, 0.12, 0.16, wx, shopH + upH / 2 + 0.78, D / 2 + 0.08)
+        box(parts, M["trim"], 2.2, 0.14, 0.2, wx, shopH + upH / 2 - 0.78, D / 2 + 0.09)
     box(parts, M["trim"], W + 0.2, 0.18, D + 0.2, 0, shopH + 0.02, 0)
-    # parapet
+    # cornice + parapet + finials
+    box(parts, M["trim"], W + 0.35, 0.3, D + 0.35, 0, H + 0.05, 0)
     box(parts, M["trim"], W + 0.2, 0.5, 0.18, 0, H + 0.25, D / 2)
+    box(parts, M["trim"], 0.18, 0.5, D + 0.2, W / 2, H + 0.25, 0)
+    box(parts, M["trim"], 0.18, 0.5, D + 0.2, -W / 2, H + 0.25, 0)
+    for fx2 in (-W / 2 + 0.9, W / 2 - 0.9):
+        cyl(parts, M["metal"], 0.16, 0.22, 0.5, fx2, H + 0.6, D / 2, seg=12)
+    # roof: 2 AC + vents
+    for k in range(2):
+        ax = -3.5 + k * 6.5
+        box(parts, M["metal"], 1.5, 0.85, 1.2, ax, H + 0.42, -D / 2 + 2.0)
+        for s in range(5):
+            box(parts, M["trim"], 1.2, 0.06, 0.08, ax, H + 0.72, -D / 2 + 1.45 + s * 0.28)
+    cyl(parts, M["trim"], 0.16, 0.2, 0.8, 5.5, H + 0.4, 1.5, seg=12)
     if enterable:
         # ---- INTERIOR: floor already sidewalk (y=0). walls + shelves + counter
         iw, idp = W - 1.2, D - 1.6
@@ -207,11 +325,28 @@ def build_shop(parts, M, rng, enterable=False):
         box(parts, M["interior"], iw, shopH - 0.2, 0.18, 0, (shopH - 0.2) / 2, -idp / 2)
         for sy in [0.55, 1.35, 2.15]:
             box(parts, M["shelf"], iw - 2.5, 0.07, 0.55, 0, sy, -idp / 2 + 0.45)
-        # counter (right side)
-        box(parts, M["counter"], 3.6, 1.05, 0.8, iw / 2 - 2.6, 0.52, 0.8)
-        # ceiling light strips (emissive)
+            # HI-DETAIL: shelf par ITEM boxes (rand-size/color mix)
+            nitems = 14
+            for it in range(nitems):
+                ix = -(iw - 3.0) / 2 + it * ((iw - 3.0) / (nitems - 1))
+                ih = 0.18 + rng.random() * 0.22
+                iw2 = 0.28 + rng.random() * 0.25
+                mat = M["shelf"] if (it + int(sy * 10)) % 3 else M["counter"]
+                box(parts, mat, iw2, ih, 0.3 + rng.random() * 0.15,
+                    ix, sy + ih / 2 + 0.04, -idp / 2 + 0.42)
+        # counter (right side) — top + body + front panels
+        cx0 = iw / 2 - 2.6
+        box(parts, M["counter"], 3.6, 0.12, 0.9, cx0, 1.06, 0.8)
+        box(parts, M["counter"], 3.4, 0.95, 0.7, cx0, 0.5, 0.8)
+        for p in range(4):
+            box(parts, M["interior"], 0.06, 0.7, 0.05, cx0 - 1.5 + p, 0.55, 1.2)
+        # display case on counter
+        box(parts, M["shopglass"], 1.4, 0.55, 0.7, cx0 - 0.8, 1.4, 0.8)
+        # ceiling light strips (emissive) + hanging pendant on door
         box(parts, M["ceilglow"], iw - 3.0, 0.08, 0.3, 0, shopH - 0.15, -0.8)
         box(parts, M["ceilglow"], iw - 3.0, 0.08, 0.3, 0, shopH - 0.15, 1.6)
+        cyl(parts, M["metal"], 0.03, 0.03, 0.5, 0, shopH - 0.4, D / 2 - 1.2, seg=6)
+        box(parts, M["ceilglow"], 0.5, 0.18, 0.5, 0, shopH - 0.55, D / 2 - 1.2)
     return W, D, H
 
 
@@ -387,12 +522,37 @@ def export_glb():
     return f"{os.path.getsize(GLB)} bytes (bake-free)"
 
 
+@step("fbx_export")
+def export_fbx():
+    # UE-track: Unreal Engine ke liye FBX (Y-up, cm-scale, unit scale on)
+    objs = [globals()["BUILDING"]] + ([globals()["GLOW"]] if globals().get("GLOW") else [])
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in objs:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = objs[0]
+    bpy.ops.export_scene.fbx(
+        filepath=FBX,
+        use_selection=True,
+        apply_unit_scale=True,
+        global_scale=1.0,
+        apply_scale_options="FBX_SCALE_NONE",
+        axis_forward="-Z",
+        axis_up="Y",
+        bake_space_transform=True,
+        mesh_smooth_type="OFF",
+        add_leaf_bones=False,
+        object_types={"MESH"},
+    )
+    return f"{os.path.getsize(FBX)} bytes"
+
+
 # ---------------------------------------------------------------- main
 try:
     build()
     vertex_ao()
     preview()
     export_glb()
+    export_fbx()
 except Exception:
     traceback.print_exc()
 

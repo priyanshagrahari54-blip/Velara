@@ -4,10 +4,9 @@
  "args": [
   "tower-glass"
  ],
- "brief": "Glass tower 16x16 ~42m \u2014 curtain wall, mullions, slabs, roof props, canopy (Style B mixed city)",
- "status": "done",
+ "brief": "HI-DETAIL tower ~30k+ tris \u2014 curtain cells, corner columns, roof clutter, lobby (UE-track)",
+ "status": "pending",
  "priority": 1,
  "result": "factory/out/tower-glass.glb",
- "worker": "actions-cpu",
- "claimed": 1794620824
+ "worker": null
 }

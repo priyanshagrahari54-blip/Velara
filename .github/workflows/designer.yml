@@ -146,8 +146,9 @@ jobs:
           while IFS='|' read -r qf script args jid; do
             [ -z "$jid" ] && continue
             echo "=== designing: $jid ($script $args) ==="
+            glbname=$(echo "$args" | tr ',' '\n' | tail -1)
             if /opt/blender/blender --background --python "factory/jobs/$script" -- $args \
-               && /opt/blender/blender --background --python factory/verify-glb.py -- "factory/out/$jid.glb"; then
+               && /opt/blender/blender --background --python factory/verify-glb.py -- "factory/out/$glbname.glb"; then
               echo "$qf|$jid|done" >> /tmp/results.txt
             else
               echo "$qf|$jid|failed" >> /tmp/results.txt

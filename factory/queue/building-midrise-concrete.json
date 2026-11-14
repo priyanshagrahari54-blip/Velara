@@ -4,10 +4,9 @@
  "args": [
   "midrise-concrete"
  ],
- "brief": "Concrete mid-rise 18x14 ~22m \u2014 frames, ledges, balconies, stairwell",
- "status": "done",
+ "brief": "HI-DETAIL midrise ~20k+ tris \u2014 framed windows, baluster balconies, cornice",
+ "status": "pending",
  "priority": 1,
  "result": "factory/out/midrise-concrete.glb",
- "worker": "actions-cpu",
- "claimed": 1794620824
+ "worker": null
 }

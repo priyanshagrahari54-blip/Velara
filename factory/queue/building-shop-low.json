@@ -4,10 +4,9 @@
  "args": [
   "shop-low"
  ],
- "brief": "Street-level shop 16x12 \u2014 shopfront glass + awning + lit sign + upper floor",
- "status": "done",
+ "brief": "HI-DETAIL shop ~10k+ tris \u2014 mullion shopfront, awning ribs, finials",
+ "status": "pending",
  "priority": 1,
  "result": "factory/out/shop-low.glb",
- "worker": "actions-cpu",
- "claimed": 1794620824
+ "worker": null
 }

@@ -13,8 +13,16 @@ import bpy
 argv = sys.argv
 path = argv[argv.index("--") + 1] if "--" in argv else argv[-1]
 
+if not os.path.exists(path):
+    print("VERIFY_JSON " + json.dumps({"file": os.path.basename(path), "error": "MISSING"}), flush=True)
+    sys.exit(1)
+
 bpy.ops.wm.read_factory_settings(use_empty=True)
-bpy.ops.import_scene.gltf(filepath=path)
+try:
+    bpy.ops.import_scene.gltf(filepath=path)
+except Exception as e:
+    print("VERIFY_JSON " + json.dumps({"file": os.path.basename(path), "error": str(e)[:200]}), flush=True)
+    sys.exit(1)
 
 objs = [o for o in bpy.data.objects if o.type == "MESH"]
 tris = sum(len(p.vertices) - 2 for o in objs for p in o.data.polygons)

@@ -4,10 +4,9 @@
  "args": [
   "shop-enterable"
  ],
- "brief": "ENTERABLE shop \u2014 door gap + interior (shelves, counter, ceiling lights)",
- "status": "done",
+ "brief": "HI-DETAIL enterable shop \u2014 interior shelf ITEMS, display case, pendant",
+ "status": "pending",
  "priority": 1,
  "result": "factory/out/shop-enterable.glb",
- "worker": "actions-cpu",
- "claimed": 1794620824
+ "worker": null
 }
