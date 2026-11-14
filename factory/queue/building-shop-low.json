@@ -5,9 +5,9 @@
   "shop-low"
  ],
  "brief": "HI-DETAIL shop ~10k+ tris \u2014 mullion shopfront, awning ribs, finials",
- "status": "pending",
+ "status": "running",
  "priority": 1,
  "result": "factory/out/shop-low.glb",
- "worker": null,
- "claimed": 1794657792
+ "worker": "w2",
+ "claimed": 1794658097
 }
