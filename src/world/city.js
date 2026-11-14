@@ -377,6 +377,7 @@ export function buildCity(scene, world, opts = {}) {
 
   const KIT_DIM = {                   // GLB nominal dims (m) — collision ke liye
     tower: { w: 16, d: 16, h: 42 },
+    towerLod: { w: 16, d: 16, h: 42 },   // door wale towers — hi-detail nahi
     midrise: { w: 18, d: 14, h: 22 },
     shop: { w: 16, d: 12, h: 7 },
     shopIn: { w: 16, d: 12, h: 7 },
@@ -415,7 +416,9 @@ export function buildCity(scene, world, opts = {}) {
     const { cx, cz, w, d, h } = L;
     let kind, sy, sxz;
     if (h >= 30) {
-      kind = 'tower';
+      // HERO-LOD: plaza ke paas hi-detail (30,932 tris) towers — GTA landmark
+      // feel; door wale 852-tri LOD (swiftshader/mobile budget). Total ~1M.
+      kind = Math.hypot(cx, cz) < 62 ? 'tower' : 'towerLod';
       sy = Math.max(0.85, Math.min(1.5, h / 42));
       sxz = Math.max(0.72, Math.min(1.15, Math.min(w, d) / 16));
     } else if (h >= 14) {

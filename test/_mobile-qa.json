@@ -11,9 +11,9 @@
       "ok": true,
       "detail": {
         "topMean": [
-          96,
-          86,
-          106
+          95,
+          89,
+          118
         ]
       }
     },
@@ -28,8 +28,8 @@
         "sky": {
           "visible": true,
           "scale": 0.15473684210526314,
-          "top": "#37265a",
-          "bottom": "#e8984e"
+          "top": "#362558",
+          "bottom": "#e4954e"
         },
         "vehicles": [
           {
@@ -230,8 +230,8 @@
       "name": "STEER pad → yaw change (>0.15 rad / 2s)",
       "ok": true,
       "detail": {
-        "yawDelta": 1.39,
-        "kmh": 15
+        "yawDelta": 1.31,
+        "kmh": 14
       }
     },
     {

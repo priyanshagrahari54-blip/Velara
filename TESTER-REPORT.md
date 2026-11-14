@@ -234,3 +234,18 @@ size unlimited · Higgsfield = concept-refs · FULL audio pass.
 
 **Pending (agla round):** hi-detail GLBs ko three.js track mein swap + mobile-qa
 regression; UE Phase-1 materials (Higgsfield refs ke baad); Chaos vehicle Phase-2.
+
+---
+
+## v0.6.2 — HI-DETAIL HERO BUILDINGS (three.js track)
+
+User: "kro aur .apk do" — UE-round ke hi-detail factory renders ab web-APK mein.
+
+- **HERO-LOD split**: plaza ke 62m ke andar hi-detail glass towers (30,932
+  tris — har window frame, corner columns, roof clutter), door wale towers
+  852-tri LOD. Scene 658k → **845,736 tris** (crash bhi pakda: 38× hi-detail
+  = 1.8M tris par swiftshader page crash — isliye GTA-style LOD).
+- midrise 4,184 / shop 828 / enterable 1,508 tris (interior shelf items!).
+
+**QA: citycheck 8/8 · mobile-qa 11/11 · g560-check PASS (190/200 draws) ·
+console 0 errors · fps 60 (emergency tier).**

@@ -27,7 +27,8 @@ function kitLoader() {
 }
 
 const SRC = {
-  tower: 'assets/buildings/tower-glass.glb',
+  tower: 'assets/buildings/tower-glass.glb',          // hi-detail (30,932 tris)
+  towerLod: 'assets/buildings/tower-glass-lod.glb',   // door wale towers (852 tris)
   midrise: 'assets/buildings/midrise-concrete.glb',
   shop: 'assets/buildings/shop-low.glb',
   shopIn: 'assets/buildings/shop-enterable.glb',
