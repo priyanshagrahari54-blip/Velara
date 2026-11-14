@@ -116,6 +116,26 @@ if "PlayerStart" not in existing:
     ps = unreal.EditorLevelLibrary.spawn_actor_from_class(unreal.PlayerStart, unreal.Vector(0, 200, 100), unreal.Rotator(0, 0, 0))
     ps.set_actor_label("PlayerStart")
 
+# ---------------------------------------------------- 3b. gang thugs (v0.8.0)
+# three.js src/gameplay/gang.js SPOTS ka mirror — Old Market district (NW).
+# Mapping: three.js (x,z) -> UE cm (x*100, z*100), +100cm ground offset.
+GANG_SPOTS = [(-140, -142), (-88, -148), (-40, -146), (-8, -138), (-150, -88), (-144, -40)]
+gang_cls = getattr(unreal, "VelaraGangAgent", None)
+if gang_cls:
+    n_gang = 0
+    for i, (gx, gz) in enumerate(GANG_SPOTS):
+        label = "GangThug_%02d" % i
+        if label in existing:
+            continue
+        thug = unreal.EditorLevelLibrary.spawn_actor_from_class(
+            gang_cls, unreal.Vector(gx * 100, gz * 100, 100), unreal.Rotator(0, 0, 0))
+        thug.set_actor_label(label)
+        n_gang += 1
+    if n_gang:
+        unreal.log("[setup] gang thugs placed: %d (Old Market NW)" % n_gang)
+else:
+    unreal.log_warning("[setup] VelaraGangAgent class nahi mili — C++ compile pehle")
+
 # ---------------------------------------------------------------- 4. save
 unreal.EditorLevelLibrary.save_current_level()
 unreal.EditorAssetLibrary.save_directory("/Game/Meshes", only_if_is_dirty=True)

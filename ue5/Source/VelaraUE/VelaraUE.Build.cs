@@ -16,6 +16,12 @@ public class VelaraUE : ModuleRules
 			"JsonUtilities"
 		});
 
-		PrivateDependencyModuleNames.AddRange(new string[] { });
+		PrivateDependencyModuleNames.AddRange(new string[]
+		{
+			// v0.8.0: phone widget (UMG) — WBP_VelaraPhone scaffold
+			"UMG",
+			"Slate",
+			"SlateCore"
+		});
 	}
 }

@@ -197,6 +197,50 @@ golden-hour, no neon). Police/damage v0.5.0 checks carry-over (code untouched).
 
 ---
 
+## v0.8.0 — 12-DOMAIN MEGA-ROUND: gang AI + phone OS + VFX + sample audio (commit TBD)
+
+User ne 12 domains mange the (3D modelling, PBR texturing, rigging, VFX, UI/UX,
+sound, core mechanics, scripting, scenes, player controller, enemy AI,
+interactions, mobile phone). ask_user LOCKED: dono tracks parallel · phone =
+in-game + touch dono · enemy = gang thugs GTA-style.
+
+**Naya kya (three.js track):**
+- **GANG SYSTEM** (`src/gameplay/gang.js`): 6 thugs Old Market (NW) —
+  idle wander → ALERT (42m) → ATTACK (20m: tracer + muzzle flash + accuracy
+  doori se). Kill → ₹120–210 loot + wanted star + blood-lite VFX. Respawn
+  35s. Hitboxes kinematic (bullets raycast se lagti hain).
+- **VELARA OS PHONE** (`src/ui/ui.js`): GTA-style smartphone — 📱 button →
+  MAP (bada canvas, gang red + police blue + pickups) / STATS (cash, health,
+  wanted, kills, time-of-day live) / SETTINGS (music / SFX / haptics toggles,
+  real audio routing).
+- **VFX LAYER** (`src/gameplay/vfx.js`): pooled particle bursts (90 pool,
+  zero per-frame alloc) — footstep dust, thug blood-lite, death poof.
+- **SOUND**: AudioEngine mein sample layer — factory WAVs (siren loop, crash
+  ×2, horn, footsteps ×4, pickup, UI click) procedural synth ke saath blend.
+  Police wanted → siren loop. Footsteps speed-scaled.
+- **HAPTICS**: pickup/kill par vibration (toggle-able phone se).
+- Minimap mein gang + police dots.
+
+**QA (4 suites, sab green):**
+- `test/gang-phone-check.mjs` **8/8** — phone open/tabs/toggles, 6 thugs NW
+  spawn, AI state machine (idle→alert 26m→attack 8m→idle), kill→loot+wanted,
+  respawn, VFX burst/decay, WAV serve + no-crash.
+- `test/_citycheck.mjs` **8/8** — 847,188 tris (+1,452 vs v0.6.2), fps 60.
+- `test/mobile-qa.mjs` **11/11** · `test/g560-check.mjs` PASS (157 draws).
+- **BUG PAKDA (bana aur fix):** (1) `audio.step()` — music sequencer ka
+  `step` counter property method ko shadow kar raha tha → rename
+  `footstep()`. (2) Headless swiftshader mein concurrent WAV decode =
+  renderer page-crash (bisect se confirm) → headless guard + sequential
+  OfflineAudioContext decode; real browser full sample audio.
+
+**UE5 mirror (same patterns, C++):** `VelaraGangAgent` (state machine + tuning
+constants gang.js ka 1:1 mirror) · `UVelaraPhoneWidget` (tabs + toggles +
+stats state) · `setup_assets.py` ab Old Market mein 6 thugs spawn karta hai ·
+Build.cs +UMG/Slate.
+
+**Shots:** `shots/v080-air.png` (97,77,90) · `v080-gang.png` (96,69,27) ·
+`v080-phone.png` (phone panel dark = overlay render confirm).
+
 ## v0.7.0-ue-alpha — UNREAL TRACK START + hi-detail factory + full audio + 4 workers
 
 **User decisions (ask_user):** Unreal Engine 5 · ~50k tris hi-detail buildings ·

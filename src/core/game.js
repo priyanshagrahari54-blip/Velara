@@ -16,6 +16,8 @@ import { PedestrianSystem } from '../world/pedestrians.js';
 import { Player } from '../gameplay/player.js';
 import { GameVehicle, VEHICLE_PRESETS, getVehiclePhysMat } from '../gameplay/vehicle.js';
 import { PoliceSystem } from '../gameplay/police.js';
+import { GangSystem } from '../gameplay/gang.js';
+import { ParticleFX } from '../gameplay/vfx.js';
 import { spawnStreetProps } from '../gameplay/props.js';
 import { WeaponManager, WEAPONS } from '../gameplay/weapons.js';
 import { buildRange } from '../gameplay/range.js';
@@ -115,6 +117,9 @@ export class VelaraGame {
     this.police = new PoliceSystem(this.scene, this.world, this);
     this.police.onWanted = (n) => this.ui.setWanted(n);
     this.police.onBusted = () => this._busted();
+    this.gang = new GangSystem(this.scene, this.world, this);
+    this.gang.onKill = () => this.ui.haptic([30, 40, 30]);
+    this.vfx = new ParticleFX(this.scene);
     this.streetProps = spawnStreetProps(this.scene, this.world);
     this._shotsRead = 0;
     // designed GLB models: qa/tests skip (logic-only), g560 sirf active, normal staggered
@@ -149,6 +154,10 @@ export class VelaraGame {
       onResume: () => this.resume(),
       onRestart: () => this.restart(),
       onTouchBtn: (name, down) => this._touchBtn(name, down),
+      onToggleMusic: () => this.audio.toggleMusic(),
+      onToggleSfx: () => this.audio.toggleSfx(),
+      onToggleHaptics: () => this.ui.hapticsOn = !this.ui.hapticsOn,
+      onPhone: (open) => { this._phoneOpen = open; },
     });
     this.missions = new MissionManager(this.ui);
     this.input = new InputManager({
@@ -393,6 +402,13 @@ export class VelaraGame {
 
   // ======================================================= bullet hits
   _onBulletHit(body, point, dir, dmg, weapon) {
+    // v0.8.0 — gang thugs pe lagti hai to damage + hitmarker
+    if (this.gang && this.gang.takeDamage(body, dmg)) {
+      this.ui.hitmarker();
+      this.vfx.burst(point.x, point.y, point.z, 0x6e1414, 8, 1.8, 0.4);
+      if (this.ui.haptic) this.ui.haptic(18);
+      return;
+    }
     // shooting range plates
     const t = this.range.targetByBody.get(body);
     if (t) {
@@ -511,6 +527,7 @@ export class VelaraGame {
   // ================================================================ flow
   startGame() {
     this.audio.init();
+    this.audio.loadSamples && this.audio.loadSamples();
     if (this.audio.ctx && this.audio.ctx.state === 'suspended') this.audio.ctx.resume();
     this.ui.hideStart();
     this.ui.showHUD();
@@ -781,7 +798,8 @@ export class VelaraGame {
         this.pickupsCollected++;
         this.addMoney(500);
         this.ui.toast('+₹500', true, 1400);
-        this.audio.blip();
+        this.audio.sfx('pickup', 0.85);
+        this.ui.haptic(22);
       }
     }
 
@@ -802,6 +820,21 @@ export class VelaraGame {
     this.audio.setSkid(this.mode === 'car' ? this.activeVehicle.driftAmount : 0);
     this.audio.setRainLevel(this.env.rainAmount);
     this.audio.update();
+
+    // --------------------------------------------- v0.8.0 systems
+    this.gang.update(dt);
+    this.vfx.update(dt, this.camera);
+    // police siren jab wanted hai (sample layer)
+    this.audio.setSiren && this.audio.setSiren(this.police.wanted > 0 && this.police.units.length > 0, 0.45);
+    // footsteps — foot mode mein chal rahe ho to
+    if (this.mode === 'foot' && this.player.speed2d > 2.2) {
+      this._stepT = (this._stepT || 0) + dt * Math.min(this.player.speed2d, 6.5);
+      if (this._stepT > 2.3) {
+        this._stepT = 0;
+        this.audio.footstep && this.audio.footstep();
+        this.vfx.burst(this.player.position.x, 0.08, this.player.position.z, 0x8a7a64, 3, 0.9, 0.4, 1.4);
+      }
+    }
 
     // ------------------------------------------------------------- camera
     this.cameraRig.update(dt);
@@ -824,7 +857,30 @@ export class VelaraGame {
       traffic: this.traffic.minimapData(),
       pickups: this.city.pickups.map((p) => ({ x: p.x, z: p.z, taken: p.taken })),
       targets: this.range.minimapData(),
+      gang: this.gang.thugs,
+      police: this.police.units,
     });
+    }
+    // phone open ho to bada map + stats bhi refresh (8Hz hi sahi)
+    if (this._phoneOpen) {
+      this.ui.drawPhoneMap({
+        extent: EXTENT,
+        roadsX: this.city.ROADS,
+        roadsZ: this.city.ROADS,
+        player: { x: px, z: pz, yaw: this._mapYaw() },
+        pickups: this.city.pickups.map((p) => ({ x: p.x, z: p.z, taken: p.taken })),
+        gang: this.gang.thugs,
+        police: this.police.units,
+      });
+      this.ui.setPhoneStats([
+        ['CASH', '₹ ' + this.money.toLocaleString('en-IN')],
+        ['HEALTH', Math.max(0, Math.round(this.health)) + ' / 100'],
+        ['WANTED', '★'.repeat(this.police.wanted) || 'CLEAN'],
+        ['GANG KILLS', String(this.gang.kills)],
+        ['RANGE HITS', String(this.rangeHits || 0)],
+        ['CRATES', String(this.cratesDestroyed || 0)],
+        ['TIME OF DAY', (this.env && this.env.state && this.env.state.timeName) || '—'],
+      ]);
     }
   }
 

@@ -1,7 +1,12 @@
-# VELARA — Unreal Engine 5 Track (v0.7-alpha)
+# VELARA — Unreal Engine 5 Track (v0.8)
 
 User decision (2026-11-10): **Unreal Engine 5** pivot — AAA visuals, unlimited
 APK size, hi-detail (50k-class) buildings, full audio. Ye folder UE project hai.
+
+**v0.8.0 naya:** `VelaraGangAgent` (gang.js ka C++ mirror — idle/alert/attack
+state machine, loot+wanted delegate) · `UVelaraPhoneWidget` (VELARA OS phone
+scaffold — tabs/toggles/stats) · `setup_assets.py` ab Old Market (NW) mein
+6 thugs spawn karta hai. Compile ke baad PIE mein thugs milenge.
 
 ## Quick start (tumhare PC par — 15 min)
 

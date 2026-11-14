@@ -72,6 +72,41 @@ const CSS = `
   #v-healthfill { height: 100%; width: 100%; border-radius: 4px;
     background: linear-gradient(90deg, #54e08a, #a8f5c0); transition: width 0.25s ease; }
 
+  /* ---- v0.8.0 PHONE (GTA-style in-game smartphone) ---- */
+  #v-phonebtn { position: absolute; right: 16px; top: 14px; width: 46px; height: 46px;
+    border-radius: 12px; border: 1px solid rgba(255,255,255,0.18);
+    background: rgba(10,14,22,0.72); color: #e8e2d4; font-size: 21px; z-index: 30;
+    backdrop-filter: blur(4px); cursor: pointer; }
+  #v-phonebtn:active { transform: scale(0.93); background: rgba(40,48,64,0.85); }
+  #v-phone { position: absolute; right: 10px; top: 10px; bottom: 10px; width: 300px;
+    max-width: 78vw; border-radius: 22px; z-index: 40; display: none;
+    background: linear-gradient(170deg, rgba(16,20,30,0.96), rgba(10,12,18,0.97));
+    border: 1px solid rgba(255,255,255,0.14); box-shadow: 0 18px 60px rgba(0,0,0,0.6);
+    overflow: hidden; flex-direction: column; font-family: inherit; }
+  #v-phone.open { display: flex; }
+  #v-phone .ph-head { padding: 14px 16px 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+  #v-phone .ph-head .ph-title { font-size: 15px; letter-spacing: 0.22em; color: #d8d2c2; }
+  #v-phone .ph-head .ph-sub { font-size: 9px; letter-spacing: 0.3em; color: #7f8ea6; margin-top: 2px; }
+  #v-phone .ph-tabs { display: flex; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  #v-phone .ph-tab { flex: 1; padding: 10px 0; text-align: center; font-size: 11px;
+    letter-spacing: 0.14em; color: #8fa0b8; cursor: pointer; }
+  #v-phone .ph-tab.on { color: #ffd9a0; border-bottom: 2px solid #ffd9a0; }
+  #v-phone .ph-body { flex: 1; overflow-y: auto; padding: 14px; }
+  #v-phonemap { width: 100%; border-radius: 12px; background: rgba(8,12,20,0.85); }
+  .ph-stat { display: flex; justify-content: space-between; padding: 9px 4px;
+    border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 12px; color: #c8d2e0; }
+  .ph-stat b { color: #ffd9a0; font-variant-numeric: tabular-nums; }
+  .ph-row { display: flex; justify-content: space-between; align-items: center;
+    padding: 11px 4px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 12px; color: #c8d2e0; }
+  .ph-toggle { width: 42px; height: 22px; border-radius: 12px; background: rgba(255,255,255,0.14);
+    position: relative; cursor: pointer; transition: background 0.15s; }
+  .ph-toggle.on { background: #54e08a; }
+  .ph-toggle::after { content: ''; position: absolute; left: 3px; top: 3px; width: 16px; height: 16px;
+    border-radius: 50%; background: #fff; transition: left 0.15s; }
+  .ph-toggle.on::after { left: 23px; }
+  .ph-close { position: absolute; right: 12px; top: 12px; width: 26px; height: 26px; border-radius: 8px;
+    background: rgba(255,255,255,0.08); color: #c8d2e0; font-size: 13px; cursor: pointer; border: none; }
+
   #v-minimap { position: absolute; left: 18px; bottom: 18px; width: 118px; height: 118px;
     border-radius: 50%; overflow: hidden; border: 1.5px solid rgba(240,230,210,0.35);
     box-shadow: 0 4px 18px rgba(0,0,0,0.55); }
@@ -247,6 +282,7 @@ export class UI {
           <div class="mp"></div>
         </div>
         <div id="v-money">₹ 0</div>
+        <button id="v-phonebtn" aria-label="phone">📱</button>
         <canvas id="v-minimap" width="336" height="336"></canvas>
         <div id="v-healthbar"><div id="v-healthfill"></div></div>
         <div id="v-speedo" class="v-panel">
@@ -272,6 +308,28 @@ export class UI {
         </div>
         <div id="v-hitmarker">
           <div class="h"></div><div class="h"></div><div class="h"></div><div class="h"></div>
+        </div>
+      </div>
+
+      <div id="v-phone">
+        <div class="ph-head">
+          <div class="ph-title">VELARA OS</div>
+          <div class="ph-sub">BY PRIYANSH · 0.8</div>
+        </div>
+        <button class="ph-close" id="v-phoneclose">✕</button>
+        <div class="ph-tabs">
+          <div class="ph-tab on" data-tab="map">MAP</div>
+          <div class="ph-tab" data-tab="stats">STATS</div>
+          <div class="ph-tab" data-tab="settings">SETTINGS</div>
+        </div>
+        <div class="ph-body">
+          <div id="ph-tab-map"><canvas id="v-phonemap" width="420" height="420"></canvas></div>
+          <div id="ph-tab-stats" style="display:none"></div>
+          <div id="ph-tab-settings" style="display:none">
+            <div class="ph-row">MUSIC <div class="ph-toggle on" id="ph-tgl-music"></div></div>
+            <div class="ph-row">SOUND FX <div class="ph-toggle on" id="ph-tgl-sfx"></div></div>
+            <div class="ph-row">HAPTICS <div class="ph-toggle on" id="ph-tgl-haptics"></div></div>
+          </div>
         </div>
       </div>
 
@@ -338,6 +396,31 @@ export class UI {
       h.style.transform = `rotate(${45 + i * 90}deg) translateY(-9px)`;
     });
     this._hitmarkT = null;
+
+    // ---- v0.8.0 phone (GTA-style) ----
+    this.phoneEl = this.$('v-phone');
+    this.phoneMap = this.$('v-phonemap');
+    this.phoneMapCtx = this.phoneMap.getContext('2d');
+    this.phoneStatsEl = this.$('ph-tab-stats');
+    this.phoneOpen = false;
+    this.hapticsOn = true;
+    this.$('v-phonebtn').addEventListener('click', () => this.togglePhone());
+    this.$('v-phoneclose').addEventListener('click', () => this.togglePhone(false));
+    this.phoneEl.querySelectorAll('.ph-tab').forEach((t) => {
+      t.addEventListener('click', () => {
+        this.phoneEl.querySelectorAll('.ph-tab').forEach((x) => x.classList.remove('on'));
+        t.classList.add('on');
+        ['map', 'stats', 'settings'].forEach((n) => {
+          this.$('ph-tab-' + n).style.display = (t.dataset.tab === n) ? '' : 'none';
+        });
+      });
+    });
+    for (const [id, fn] of [['ph-tgl-music', 'onToggleMusic'], ['ph-tgl-sfx', 'onToggleSfx'], ['ph-tgl-haptics', 'onToggleHaptics']]) {
+      this.$(id).addEventListener('click', () => {
+        if (hooks[fn]) hooks[fn]();
+        this.$(id).classList.toggle('on');
+      });
+    }
 
     this.$('v-play').addEventListener('click', () => hooks.onPlay());
     this.$('v-resume').addEventListener('click', () => hooks.onResume());
@@ -560,6 +643,77 @@ export class UI {
   }
 
   // ------------------------------------------------------------- minimap
+  togglePhone(force) {
+    this.phoneOpen = force !== undefined ? force : !this.phoneOpen;
+    this.phoneEl.classList.toggle('open', this.phoneOpen);
+    if (this.hooks.onPhone) this.hooks.onPhone(this.phoneOpen);
+  }
+
+  haptic(pattern) {
+    if (!this.hapticsOn || !navigator.vibrate) return;
+    try { navigator.vibrate(pattern); } catch (e) { /* no-op */ }
+  }
+
+  // phone MAP — minimap ka bada bhai (gang + police dots ke saath)
+  drawPhoneMap(data) {
+    if (!this.phoneOpen) return;
+    const c = this.phoneMapCtx;
+    const W = this.phoneMap.width, H = this.phoneMap.height;
+    const { extent, roadsX, roadsZ, player, gang, police } = data;
+    const scale = W / (extent * 2 + 80);
+    c.clearRect(0, 0, W, H);
+    c.fillStyle = 'rgba(8,12,20,0.9)';
+    c.fillRect(0, 0, W, H);
+    const toMap = (x, z) => [W / 2 + x * scale, H / 2 + z * scale];
+    c.strokeStyle = 'rgba(140,170,210,0.4)';
+    c.lineWidth = Math.max(5, 16 * scale);
+    for (const rx of roadsX) {
+      const [mx] = toMap(rx, 0);
+      c.beginPath(); c.moveTo(mx, 0); c.lineTo(mx, H); c.stroke();
+    }
+    for (const rz of roadsZ) {
+      const [, mz] = toMap(0, rz);
+      c.beginPath(); c.moveTo(0, mz); c.lineTo(W, mz); c.stroke();
+    }
+    if (data.pickups) {
+      c.fillStyle = '#ffd66e';
+      for (const p of data.pickups) {
+        if (p.taken) continue;
+        const [mx, mz] = toMap(p.x, p.z);
+        c.beginPath(); c.arc(mx, mz, 4, 0, Math.PI * 2); c.fill();
+      }
+    }
+    if (gang) {
+      c.fillStyle = '#ff5d6e';
+      for (const t of gang) {
+        if (t.dead) continue;
+        const [mx, mz] = toMap(t.mesh.position.x, t.mesh.position.z);
+        c.beginPath(); c.arc(mx, mz, 5.5, 0, Math.PI * 2); c.fill();
+      }
+    }
+    if (police) {
+      c.fillStyle = '#6ea8ff';
+      for (const u of police) {
+        const [mx, mz] = toMap(u.body.position.x, u.body.position.z);
+        c.beginPath(); c.arc(mx, mz, 5.5, 0, Math.PI * 2); c.fill();
+      }
+    }
+    const [px, pz] = toMap(player.x, player.z);
+    c.save();
+    c.translate(px, pz);
+    c.rotate(player.yaw);
+    c.fillStyle = '#ffffff';
+    c.beginPath(); c.moveTo(0, -13); c.lineTo(9, 10); c.lineTo(0, 5); c.lineTo(-9, 10);
+    c.closePath(); c.fill();
+    c.restore();
+  }
+
+  setPhoneStats(rows) {
+    if (!this.phoneOpen || !this.phoneStatsEl) return;
+    this.phoneStatsEl.innerHTML = rows.map(([k, v]) =>
+      `<div class="ph-stat"><span>${k}</span><b>${v}</b></div>`).join('');
+  }
+
   drawMinimap(data) {
     const c = this.mctx;
     const W = this.minimap.width, H = this.minimap.height;

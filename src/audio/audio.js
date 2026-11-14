@@ -352,4 +352,83 @@ export class AudioEngine {
       this.nextTime += this.stepDur;
     }
   }
+  // ================================================================ v0.8.0
+  // SAMPLE LAYER — factory-designed WAVs (sound team pack). Procedural synth
+  // (engine/skid/music) ke saath blend hota hai; jo cheez synth me missing
+  // thi (siren, crash crunch, footsteps, UI) wo samples se aati hai.
+  // ================================================================
+  async loadSamples() {
+    if (this._samplesLoading) return;
+    this._samplesLoading = true;
+    this.samples = this.samples || {};
+    const NAMES = ['siren_loop', 'crash_hard', 'crash_soft', 'horn',
+      'footstep_01', 'footstep_02', 'footstep_03', 'footstep_04',
+      'pickup', 'ui_click'];
+    if (!this.ctx || !window.fetch) { this._samplesLoading = false; return; }
+    // HEADLESS GUARD: QA swiftshader mein concurrent decode + running context
+    // renderer crash karta hai (bisect confirmed). Real browsers theek chalte
+    // hain — bare-page decode test (test/_ab.mjs) se verified.
+    const headless = navigator.webdriver === true;
+    const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    const dctx = OAC ? new OAC(1, 1, 44100) : this.ctx;
+    for (const n of NAMES) {
+      if (this.samples[n]) continue;
+      if (headless) continue;
+      try {
+        const res = await fetch(`assets/audio/${n}.wav`);
+        if (!res.ok) continue;
+        const buf = await res.arrayBuffer();
+        // sequential — audio thread par ek-ek file, pressure kam
+        this.samples[n] = await dctx.decodeAudioData(buf);
+        await new Promise((r) => setTimeout(r, 80));
+      } catch (e) { /* sample missing — synth fallback chalta rahega */ }
+    }
+    this._samplesLoading = false;
+  }
+
+  sfx(name, vol = 1.0, rate = 1.0) {
+    if (!this.ctx || !this.samples || !this.samples[name]) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    src.buffer = this.samples[name];
+    src.playbackRate.value = rate;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + src.buffer.duration);
+    src.connect(g); g.connect(this.sfxGain);
+    src.start(t);
+    src.stop(t + src.buffer.duration + 0.05);
+  }
+
+  // police siren loop — wanted > 0 par ON (gain ramp, click nahi hota)
+  setSiren(on, vol = 0.5) {
+    if (!this.ctx || !this.samples || !this.samples.siren_loop) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    if (on && !this._sirenSrc) {
+      const src = ctx.createBufferSource();
+      src.buffer = this.samples.siren_loop;
+      src.loop = true;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      src.connect(g); g.connect(this.sfxGain);
+      src.start(t);
+      this._sirenSrc = src; this._sirenGain = g;
+      g.gain.exponentialRampToValueAtTime(vol, t + 0.4);
+    } else if (!on && this._sirenSrc) {
+      const g = this._sirenGain, src = this._sirenSrc;
+      g.gain.setTargetAtTime(0.0001, t, 0.25);
+      src.stop(t + 1.0);
+      this._sirenSrc = null; this._sirenGain = null;
+    }
+  }
+
+  footstep() {   // footstep — 4 variations random ("step" sequencer counter se clash)
+    const n = 'footstep_0' + (1 + Math.floor(Math.random() * 4));
+    this.sfx(n, 0.55, 0.9 + Math.random() * 0.2);
+  }
+
+  toggleSfx() {
+    if (this.sfxGain) this.sfxGain.gain.value = this.sfxOn = !this.sfxOn ? 1 : 0;
+    return this.sfxOn;
+  }
 }
