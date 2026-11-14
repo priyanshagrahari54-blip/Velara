@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as CANNON from 'cannon-es';
 
 // ---------------------------------------------------------------------------
@@ -41,6 +42,7 @@ export class Player {
     this.gun = null;
 
     this._buildMesh();
+    this.ensureHeroGLB();
     this.group.position.set(spawn.x, spawn.y - 0.42, spawn.z);
     scene.add(this.group);
   }
@@ -100,6 +102,44 @@ export class Player {
     }
 
     g.traverse((o) => { if (o.isMesh) { o.castShadow = true; } });
+  }
+
+  // v0.9.0 — factory hero-v2 GLB (user: "character boxy hai"). Joint-pivot
+  // rig: ArmL/ArmR/LegL/LegR nodes ke origins joints par hain, isliye现有
+  // anim code (this.armR.rotation...) seedha GLB ko chalata hai.
+  ensureHeroGLB() {
+    if (this._heroTried) return;
+    this._heroTried = true;
+    const loader = new GLTFLoader();
+    loader.load('assets/characters/hero-v2.glb', (gltf) => {
+      const m = gltf.scene;
+      const N = {};
+      m.traverse((o) => {
+        N[o.name] = o;
+        if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; }
+      });
+      const need = ['ArmL', 'ArmR', 'LegL', 'LegR', 'Head', 'Torso'];
+      if (!need.every((k) => N[k])) return;   // rig incomplete — procedural raho
+      // glTF forward -Z hai, procedural body +Z face karti hai → π ghumao
+      m.rotation.y = Math.PI;
+      this.group.add(m);
+      for (const c of this.group.children) {
+        if (c !== m) c.visible = false;       // boxy body chhupao
+      }
+      // ---- LIMB REMAP: purane refs ab GLB joints ----
+      this.armL = N.ArmL; this.armR = N.ArmR;
+      this.legL = N.LegL; this.legR = N.LegR;
+      this.headNode = N.Head; this.torsoNode = N.Torso;
+      // gun dobara naye right-arm par (agar pehle se laga tha)
+      if (this.gun) {
+        const g = this.gun;
+        if (g.parent) g.parent.remove(g);
+        g.position.set(0, -0.5, 0.03);
+        g.rotation.set(-Math.PI / 2, 0, 0);
+        this.armR.add(g);
+      }
+      this.heroGLB = m;
+    }, undefined, () => { /* fail = procedural body, koi dikkat nahi */ });
   }
 
   removeFromWorld() { this.world.removeBody(this.body); }
@@ -166,7 +206,7 @@ export class Player {
     if (this.grounded) {
       // REMASTER: momentum feel — accel derawar (8), rukne par halka slide (4.5)
       const moving = len > 0.01;
-      const k = Math.min(1, dt * (moving ? 8 : 4.5));
+      const k = Math.min(1, dt * (moving ? 13 : 7));   // v0.9.0: GTA-snappy
       vel.x += (vx - vel.x) * k;
       vel.z += (vz - vel.z) * k;
       if (input.jump) {
@@ -174,7 +214,7 @@ export class Player {
         this.grounded = false;
       }
     } else {
-      const k = Math.min(1, dt * 2.2);
+      const k = Math.min(1, dt * 3.5);   // v0.9.0: air control zyada
       vel.x += (vx - vel.x) * k * 0.5;
       vel.z += (vz - vel.z) * k * 0.5;
     }
@@ -185,7 +225,7 @@ export class Player {
       let diff = target - this.facing;
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
-      this.facing += diff * Math.min(1, dt * (this.aiming ? 16 : 12));
+      this.facing += diff * Math.min(1, dt * (this.aiming ? 24 : 18));   // v0.9.0: turant face
     }
     this.group.rotation.y = this.facing;
 

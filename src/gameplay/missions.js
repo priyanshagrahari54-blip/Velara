@@ -21,6 +21,7 @@ export class MissionManager {
 
   _complete(game, reward, nextIdx, nextTitle, nextDesc, nextProg) {
     game.addMoney(reward);
+    game.calls && game.calls.onMissionComplete();   // v0.9.0: fixer call
     this.ui.toast(`✅ MISSION COMPLETE &nbsp; +₹${reward.toLocaleString('en-IN')}`, true, 3600);
     game.audio.blip();
     this.index = nextIdx || 5;

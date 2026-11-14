@@ -197,6 +197,48 @@ golden-hour, no neon). Police/damage v0.5.0 checks carry-over (code untouched).
 
 ---
 
+## v0.9.0 — GTA-5 PLAYTHROUGH ROUND: character + movement + tyres + HUD + seasons + calls + 60fps (commit TBD)
+
+**User feedback (seedha khel ke):** movement sluggish + player sirf ek direction
+mein face, character boxy, car ka tyre upar tairta hai, HUD buttons par
+PEDAL/STEERING jaise text, Samsung F15 par lag, logo/start page bekar, seasons
+chahiye, phone par calls chahiye, 60fps bina downgrade.
+
+### TESTER TEAM — GTA-5 comparison playthrough findings → fix → recheck
+
+| # | Finding (playthrough) | Root cause | Fix | Recheck |
+|---|---|---|---|---|
+| 1 | Character boxy (sab boxes) | Player 100% BoxGeometry procedural tha | **Factory hero-v2**: cloud Blender render — smooth jointed humanoid 5,088 tris, 38 nodes, olive bomber + tee + jeans + sneakers (user-picked concept #2), bake-free PBR. GLB three.js + FBX UE5 dono | ✅ v09 #2/#3: limbs remapped, walk-cycle GLB arms chal rahe |
+| 2 | Movement "der se" + ek hi direction | (a) accel 8/s + turn 12/s sluggish (b) **foot camera auto-follow HI Nahi tha** — sirf car mode mein tha! Player screen se bahar bhaagta tha | accel 13, turn 18 (aim 24), air 3.5 + **GTA-style foot camera auto-follow** (2.2/s settle, 2.5s hold-grace, manual look pause 1.6s, aim par off) | ✅ v09 #4: camera player ke peeche settle hota hai |
+| 3 | Tyre upar tairta hai | GLB wheel geometry physics radius se chhoti (0.335 vs 0.42) + wheel order traversal-random | Load par GLB wheels physics-R tak scale + FL/FR/RL/RR deterministic sort | ✅ v09 #5 + tyrecheck: floatGap 13cm → 0-2cm, geoR==physR |
+| 4 | HUD buttons par text (GAS/BRAKE...) | Text labels + emoji icons | GTA-clean SVG line icons (arrow/P/horn/door/jump/crosshair/swap), zero text | ✅ v09 #9: 6/6 svg + no text |
+| 5 | F15 par lag, 60fps nahi | Emergency tier 0.24 render + minimap OFF + sirf g560 mein dyn-res | **Dynamic render-scale ab SAB tiers** (DLSS-jaisa fallback: 0.55×floor..1×, auto upar-neeche), real devices kabhi emergency tier mein nahi girenge, minimap ab har tier mein 8Hz (pehle 60Hz CPU waste) | ✅ v09 #10 bounded + governor floor |
+| 6 | Logo/start page bekar | Text-only h1 | User-picked logo (option 1) — 51KB JPEG, gold wordmark, cinematic start page, tight copy | ✅ v09 #1 |
+| 7 | Seasons nahi the | — | **4 seasons** (spring/summer/monsoon/winter), 10 min each: sun/fog/tint/rain-chance sab alag + foliage tint + phone STATS mein SEASON row + toast | ✅ v09 #6: monsoon fog ×1.36+, switch back |
+| 8 | Phone calls nahi the | — | **Full call system**: Vikram (fixer) intro + mission calls, Raja gang threat (pehle thug kill par), Mom/wrong-number flavor, CONTACTS tab (4 contacts, tap-to-call), ringtone synth, incoming banner + GTA subtitles | ✅ v09 #7/#8 |
+
+### QA (5 suites — sab green)
+- `test/v09-check.mjs` **11/11** (naya — hero/camera/tyre/seasons/calls/HUD/dyn-res/logo)
+- `test/_citycheck.mjs` **8/8** (852,276 tris — hero +5k) · `test/mobile-qa.mjs` **11/11**
+- `test/g560-check.mjs` PASS (175 draws) · `test/gang-phone-check.mjs` **8/8**
+- **Heap probe**: 50s logic-only stepping — 117MB flat, **zero leak**
+- **Bugs pakde:** (1) factory job mein `read_factory_settings` materials ke
+  BAAD chal raha tha → dead-RNA crash → reset-first fix; (2) camera
+  `_lookIdle=0` falsy bug; (3) swiftshader page-crash storms — QA ab
+  `_noRender` hook + lite viewports use karta hai (real devices par N/A).
+
+### UE5 mirror
+`UVelaraPhoneWidget` mein call-flow (AnswerCall/DeclineCall/HangUp +
+OnCallStateChanged) · `hero-v2.fbx` Content/Meshes ke liye ready ·
+**6 Higgsfield-style lookdev refs** `ue5/Content/Refs/lookdev/` mein generated
+(tower/midrise/shop/street-mood/night-windows/vehicle) — Phase-1 PBR materials
+ka target set.
+
+### Shots (GTA-5 review ke liye)
+`shots/v090-start.png` (logo page) · `v090-hero.png` (factory character,
+golden hour) · `v090-tyre.png` (car + ground) · `v090-call.png` (incoming) ·
+`v090-monsoon.png` (raat + baarish) · `v090-hud-touch.png` (touch HUD icons).
+
 ## v0.8.0 — 12-DOMAIN MEGA-ROUND: gang AI + phone OS + VFX + sample audio (commit TBD)
 
 User ne 12 domains mange the (3D modelling, PBR texturing, rigging, VFX, UI/UX,

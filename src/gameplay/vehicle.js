@@ -276,7 +276,24 @@ export class GameVehicle {
       // gaadi se ~14m door ud jaate the. Fix: wheels ko scene-level par attach
       // (world transform preserved) — ab procedural wheels jaisa hi sync.
       m.updateMatrixWorld(true);
+      // v0.9.0 FIX-1: wheel order deterministic (FL, FR, RL, RR) — traversal
+      // order random tha to galag corner pe sync ho sakte the.
+      const WORDER = ['WheelFL', 'WheelFR', 'WheelRL', 'WheelRR'];
+      wheels.sort((a, b) => WORDER.indexOf(a.name) - WORDER.indexOf(b.name));
       for (const w of wheels) this.scene.attach(w);
+      // v0.9.0 FIX-2 TYRE-FLOAT: GLB wheel geometry physics radius se chhoti
+      // thi (tyres road se ~13cm upar tairti thin) — visual R = physics R.
+      for (const w of wheels) {
+        w.updateMatrixWorld(true);
+        const box = new THREE.Box3().setFromObject(w);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        const geoR = Math.max(size.y, size.z) / 2;
+        const wantR = this.preset.wheelR;
+        if (geoR > 0.05 && Math.abs(geoR - wantR) > 0.012) {
+          w.scale.multiplyScalar(wantR / geoR);
+        }
+      }
       // procedural body chhupao (group children pehle se the)
       for (const c of this.group.children) {
         if (c !== m) c.visible = false;

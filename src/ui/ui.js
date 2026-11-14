@@ -16,16 +16,16 @@ const CSS = `
     background: radial-gradient(ellipse at center, rgba(16,18,22,0.9) 0%, rgba(5,6,8,0.97) 75%); }
   #v-start .keys { margin-bottom: auto; }
   @media (max-height: 320px) { #v-start .story, #v-start .keys, #v-start .byline { display: none; } }
-  #v-start h1 { font-size: clamp(44px, 9vw, 96px); letter-spacing: 0.22em; font-weight: 800;
-    margin: 0; margin-top: auto; color: #f4f6f9; text-shadow: 0 2px 16px rgba(0,0,0,0.6); }
-  #v-start h1 span { color: #9aa2ae; }
+  #v-start h1 { margin: 0; margin-top: auto; }
+  #v-start .logo-img { width: min(560px, 84vw); display: block;
+    filter: drop-shadow(0 12px 36px rgba(0,0,0,0.8)); }
   #v-start .sub { margin-top: 6px; font-size: clamp(12px, 2vw, 17px); letter-spacing: 0.5em;
     color: #8b94a3; text-transform: uppercase; }
   #v-start .story { max-width: 620px; text-align: center; margin: 26px 20px 8px; color: #c6ccd6;
     font-size: 14.5px; line-height: 1.65; }
-  #v-play { pointer-events: auto; margin-top: 26px; padding: 15px 58px; font-size: 19px;
-    letter-spacing: 0.25em; font-weight: 700; color: #14171c; cursor: pointer;
-    background: #e8eaef;
+  #v-play { pointer-events: auto; margin-top: 28px; padding: 15px 62px; font-size: 19px;
+    letter-spacing: 0.28em; font-weight: 800; color: #1a1508; cursor: pointer;
+    background: linear-gradient(180deg, #f0e2c0, #d2b678);
     border: none; border-radius: 12px; box-shadow: 0 6px 24px rgba(0,0,0,0.45);
     transition: transform 0.12s ease, box-shadow 0.12s ease; }
   #v-play:hover { transform: scale(1.04); box-shadow: 0 8px 32px rgba(0,0,0,0.55); }
@@ -73,6 +73,41 @@ const CSS = `
     background: linear-gradient(90deg, #54e08a, #a8f5c0); transition: width 0.25s ease; }
 
   /* ---- v0.8.0 PHONE (GTA-style in-game smartphone) ---- */
+  /* ---- v0.9.0 CALLS (GTA-style) ---- */
+  #v-call { position: absolute; top: 16px; left: 50%; transform: translate(-50%, -120%);
+    display: flex; align-items: center; gap: 12px; padding: 10px 14px; z-index: 45;
+    border-radius: 16px; background: rgba(10,13,20,0.92);
+    border: 1px solid rgba(255,255,255,0.16); box-shadow: 0 12px 40px rgba(0,0,0,0.55);
+    transition: transform 0.25s ease; pointer-events: auto; }
+  #v-call.show { transform: translate(-50%, 0); }
+  #v-call .cav { width: 44px; height: 44px; border-radius: 50%; display: flex;
+    align-items: center; justify-content: center; font-weight: 800; font-size: 18px;
+    color: #0b0d12; flex: none; }
+  #v-call .cinfo { min-width: 120px; }
+  #v-call .cname { font-size: 13.5px; color: #f0e6c8; font-weight: 700; }
+  #v-call .csub { font-size: 10px; color: #8fa3bf; letter-spacing: 0.18em; margin-top: 2px; }
+  #v-call .cbtns { display: flex; gap: 8px; }
+  #v-call .cbtn { width: 46px; height: 46px; border-radius: 50%; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 17px; color: #fff; }
+  #v-call .cbtn.ans { background: #2f9e57; }
+  #v-call .cbtn.dec { background: #b03636; }
+  #v-call .cbtn.hang { background: #b03636; width: 40px; height: 40px; font-size: 14px; }
+  #v-call.ring .cav { animation: vringpulse 1s ease infinite; }
+  @keyframes vringpulse { 0%,100% { box-shadow: 0 0 0 0 rgba(240,230,200,0.0); }
+    50% { box-shadow: 0 0 0 10px rgba(240,230,200,0.12); } }
+  #v-callline { position: absolute; bottom: 88px; left: 50%; transform: translateX(-50%);
+    max-width: 76vw; padding: 10px 20px; border-radius: 10px; z-index: 44; display: none;
+    background: rgba(5,7,11,0.78); color: #f0e6c8; font-size: 14px; line-height: 1.5;
+    text-align: center; letter-spacing: 0.02em; }
+  #v-callline.show { display: block; }
+  .ph-contact { display: flex; align-items: center; gap: 10px; padding: 11px 4px;
+    border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .ph-contact .pcav { width: 34px; height: 34px; border-radius: 50%; flex: none;
+    display: flex; align-items: center; justify-content: center; font-weight: 800;
+    font-size: 14px; color: #0b0d12; }
+  .ph-contact .pcname { flex: 1; font-size: 12.5px; color: #c8d2e0; }
+  .ph-contact .pccall { padding: 6px 14px; border-radius: 14px; border: none;
+    background: #2f9e57; color: #fff; font-size: 11px; letter-spacing: 0.1em; cursor: pointer; }
   #v-phonebtn { position: absolute; right: 16px; top: 14px; width: 46px; height: 46px;
     border-radius: 12px; border: 1px solid rgba(255,255,255,0.18);
     background: rgba(10,14,22,0.72); color: #e8e2d4; font-size: 21px; z-index: 30;
@@ -246,12 +281,11 @@ export class UI {
     wrap.id = 'v-ui';
     wrap.innerHTML = `
       <div id="v-start">
-        <h1>VELARA<span>.</span></h1>
+        <h1><img class="logo-img" src="assets/branding/velara-logo.jpg" alt="VELARA"></h1>
         <div class="sub">City of Shadows</div>
         <div class="story">
-          Welcome to <b>VELARA</b> — a moody overcast city where every
-          crash, drift and bullet obeys real physics. Today your story begins:
-          money to earn, machines to master, and a city to shake.
+          <b>VELARA</b> — ek zinda sheher. Real physics, real consequences.
+          Paisa kamao, gari sambhalo, sheher hila do.
         </div>
         <button id="v-play">PLAY</button>
         <div class="byline">A GAME BY <b>PRIYANSH</b></div>
@@ -314,16 +348,18 @@ export class UI {
       <div id="v-phone">
         <div class="ph-head">
           <div class="ph-title">VELARA OS</div>
-          <div class="ph-sub">BY PRIYANSH · 0.8</div>
+          <div class="ph-sub">BY PRIYANSH · 0.9</div>
         </div>
         <button class="ph-close" id="v-phoneclose">✕</button>
         <div class="ph-tabs">
           <div class="ph-tab on" data-tab="map">MAP</div>
+          <div class="ph-tab" data-tab="contacts">CONTACTS</div>
           <div class="ph-tab" data-tab="stats">STATS</div>
           <div class="ph-tab" data-tab="settings">SETTINGS</div>
         </div>
         <div class="ph-body">
           <div id="ph-tab-map"><canvas id="v-phonemap" width="420" height="420"></canvas></div>
+          <div id="ph-tab-contacts" style="display:none"></div>
           <div id="ph-tab-stats" style="display:none"></div>
           <div id="ph-tab-settings" style="display:none">
             <div class="ph-row">MUSIC <div class="ph-toggle on" id="ph-tgl-music"></div></div>
@@ -332,6 +368,13 @@ export class UI {
           </div>
         </div>
       </div>
+
+      <div id="v-call">
+        <div class="cav"></div>
+        <div class="cinfo"><div class="cname"></div><div class="csub"></div></div>
+        <div class="cbtns"></div>
+      </div>
+      <div id="v-callline"></div>
 
       <div id="v-pause">
         <div class="box">
@@ -348,19 +391,19 @@ export class UI {
         <div id="v-drive">
           <div class="v-pad" id="v-pad-sl"><svg viewBox="0 0 24 24" width="46" height="46" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></div>
           <div class="v-pad" id="v-pad-sr"><svg viewBox="0 0 24 24" width="46" height="46" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></div>
-          <div class="v-pad" id="v-pad-gas">GAS</div>
-          <div class="v-pad" id="v-pad-brk">BRAKE</div>
-          <div class="v-pad" id="v-pad-hb">HANDBRAKE</div>
-          <div class="v-pad" id="v-pad-horn">📣</div>
-          <div class="v-pad" id="v-pad-ex">EXIT</div>
+          <div class="v-pad" id="v-pad-gas"><svg viewBox="0 0 24 24" width="46" height="46" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6M6 12l6-6 6 6"/></svg></div>
+          <div class="v-pad" id="v-pad-brk"><svg viewBox="0 0 24 24" width="46" height="46" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v13M6 12l6 6 6-6"/></svg></div>
+          <div class="v-pad" id="v-pad-hb"><svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 16.5v-9h3a2.5 2.5 0 0 1 0 5h-3"/></svg></div>
+          <div class="v-pad" id="v-pad-horn"><svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v4h3l5 4V6l-5 4H4z"/><path d="M16.5 9.5a4 4 0 0 1 0 5"/><path d="M18.8 7.2a7.2 7.2 0 0 1 0 9.6"/></svg></div>
+          <div class="v-pad" id="v-pad-ex"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4H5v16h8"/><path d="M10 12h10m-3-3 3 3-3 3"/></svg></div>
         </div>
         <div id="v-stick"><div class="nub"></div></div>
-        <div class="v-tbtn" id="v-tbtn-a">JUMP</div>
+        <div class="v-tbtn" id="v-tbtn-a"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18V6M7 11l5-5 5 5"/><path d="M6 21h12"/></svg></div>
         <div class="v-tbtn" id="v-tbtn-e">E</div>
-        <div class="v-tbtn" id="v-tbtn-h">📣</div>
-        <div class="v-tbtn" id="v-tbtn-f">FIRE</div>
+        <div class="v-tbtn" id="v-tbtn-h"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v4h3l5 4V6l-5 4H4z"/><path d="M16.5 9.5a4 4 0 0 1 0 5"/></svg></div>
+        <div class="v-tbtn" id="v-tbtn-f"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="8.2"/></svg></div>
         <div class="v-tbtn" id="v-tbtn-aim"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="6.5"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4"/></svg></div>
-        <div class="v-tbtn" id="v-tbtn-w">🔄</div>
+        <div class="v-tbtn" id="v-tbtn-w"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8h11m0 0-3-3m3 3-3 3M17 16H6m0 0 3-3m-3 3 3 3"/></svg></div>
       </div>
     `;
     root.appendChild(wrap);
@@ -397,6 +440,12 @@ export class UI {
     });
     this._hitmarkT = null;
 
+    // ---- v0.9.0 calls (GTA-style phone calls) ----
+    this.callEl = this.$('v-call');
+    this.callLineEl = this.$('v-callline');
+    this.callEl.style.display = 'none';
+    this._callTimer = null;
+
     // ---- v0.8.0 phone (GTA-style) ----
     this.phoneEl = this.$('v-phone');
     this.phoneMap = this.$('v-phonemap');
@@ -410,7 +459,7 @@ export class UI {
       t.addEventListener('click', () => {
         this.phoneEl.querySelectorAll('.ph-tab').forEach((x) => x.classList.remove('on'));
         t.classList.add('on');
-        ['map', 'stats', 'settings'].forEach((n) => {
+        ['map', 'contacts', 'stats', 'settings'].forEach((n) => {
           this.$('ph-tab-' + n).style.display = (t.dataset.tab === n) ? '' : 'none';
         });
       });
@@ -706,6 +755,62 @@ export class UI {
     c.beginPath(); c.moveTo(0, -13); c.lineTo(9, 10); c.lineTo(0, 5); c.lineTo(-9, 10);
     c.closePath(); c.fill();
     c.restore();
+  }
+
+  showIncomingCall(contact, { onAnswer, onDecline }) {
+    const el = this.callEl;
+    el.style.display = 'flex';
+    el.classList.add('show', 'ring');
+    el.querySelector('.cav').style.background = contact.color;
+    el.querySelector('.cav').textContent = contact.name[0];
+    el.querySelector('.cname').textContent = contact.name;
+    el.querySelector('.csub').textContent = 'INCOMING CALL';
+    const btns = el.querySelector('.cbtns');
+    btns.innerHTML = '';
+    const ans = document.createElement('button');
+    ans.className = 'cbtn ans'; ans.textContent = '✆';
+    ans.onclick = () => onAnswer && onAnswer();
+    const dec = document.createElement('button');
+    dec.className = 'cbtn dec'; dec.textContent = '✕';
+    dec.onclick = () => onDecline && onDecline();
+    btns.append(ans, dec);
+  }
+
+  showCallActive(contact) {
+    const el = this.callEl;
+    el.classList.remove('ring');
+    el.classList.add('show');
+    el.querySelector('.csub').textContent = 'CALL IN PROGRESS';
+    const btns = el.querySelector('.cbtns');
+    btns.innerHTML = '';
+    const hang = document.createElement('button');
+    hang.className = 'cbtn hang'; hang.textContent = 'END';
+    hang.onclick = () => this.hooks.onCallHangup && this.hooks.onCallHangup();
+    btns.append(hang);
+  }
+
+  showCallLine(text, idx, total) {
+    const el = this.callLineEl;
+    el.textContent = text;
+    el.classList.add('show');
+  }
+
+  hideCall() {
+    this.callEl.style.display = 'none';
+    this.callEl.classList.remove('show', 'ring');
+    this.callLineEl.classList.remove('show');
+  }
+
+  renderContacts(contacts, onCall) {
+    const box = this.$('ph-tab-contacts');
+    if (!box) return;
+    box.innerHTML = contacts.map((c) =>
+      `<div class="ph-contact"><div class="pcav" style="background:${c.color}">${c.name[0]}</div>
+       <div class="pcname">${c.name}</div>
+       <button class="pccall" data-id="${c.id}">CALL</button></div>`).join('');
+    box.querySelectorAll('.pccall').forEach((b) => {
+      b.addEventListener('click', () => onCall(b.dataset.id));
+    });
   }
 
   setPhoneStats(rows) {

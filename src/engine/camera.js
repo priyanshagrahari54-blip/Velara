@@ -27,6 +27,7 @@ export class CameraRig {
     // aim mode (over-the-shoulder) + recoil spring
     this.aimBlend = 0;
     this._aimTarget = 0;
+    this._lookIdle = 99;   // v0.9.0: manual-look pause timer
     this._recoil = 0;
 
     this.raycaster = new THREE.Raycaster();
@@ -48,6 +49,7 @@ export class CameraRig {
 
   applyLook(dx, dy) {
     const sens = 0.0023;
+    this._lookIdle = 0;   // v0.9.0: manual look ne auto-follow ko pause kiya
     if (this.getMode() === 'car') {
       this.mouseYawOffset = Math.max(-2.6, Math.min(2.6, this.mouseYawOffset - dx * sens));
     } else {
@@ -101,6 +103,21 @@ export class CameraRig {
       target = this._v1.set(c.x, c.y + 1.1, c.z);
       dist = this.dist + Math.min(this.car.getSpeedKmh(), 150) * 0.014;
     } else {
+      // v0.9.0 GTA-style FOOT AUTO-FOLLOW: chalte waqt camera dheere-dheere
+      // player ke peeche ho kar aata hai. Manual look ke ~1.6s baad resume,
+      // aiming par band (crosshair hi boss hai tab).
+      this._lookIdle = (this._lookIdle ?? 0) + dt;
+      // rukne ke baad bhi 1.5s tak settle karta hai (GTA feel)
+      if (this.followSpeed > 0.5) this._followHold = 2.5;
+      else this._followHold = Math.max(0, (this._followHold || 0) - dt);
+      if (this.autoFollow !== false && this._aimTarget < 0.5 &&
+          this._lookIdle > 1.6 && this.followYaw !== undefined &&
+          this.followYaw !== null && this._followHold > 0) {
+        let diff = this.followYaw - this.yaw;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        this.yaw += diff * Math.min(1, dt * 2.2);   // v0.9.0: responsive settle
+      }
       yaw = this.yaw;
       this.player.headPosition(this._v1);
       target = this._v1;

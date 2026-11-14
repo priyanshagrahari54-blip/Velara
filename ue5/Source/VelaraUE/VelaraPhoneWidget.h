@@ -58,6 +58,25 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Velara|Phone")
 	bool IsHapticsOn() const { return bHapticsOn; }
 
+	// ---- v0.9.0 CALLS (gameplay/calls.js ka mirror) ----
+	// Incoming call flow: game mode IsCallIncoming() -> widget banner +
+	// ringtone; AnswerCall/DeclineCall se state chalta hai.
+	UFUNCTION(BlueprintCallable, Category = "Velara|Phone")
+	bool AnswerCall();
+
+	UFUNCTION(BlueprintCallable, Category = "Velara|Phone")
+	bool DeclineCall();
+
+	UFUNCTION(BlueprintCallable, Category = "Velara|Phone")
+	void HangUp();
+
+	UFUNCTION(BlueprintPure, Category = "Velara|Phone")
+	bool IsCallActive() const { return bCallActive; }
+
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCallStateChanged, bool, bActive);
+	UPROPERTY(BlueprintAssignable, Category = "Velara|Phone")
+	FOnCallStateChanged OnCallStateChanged;
+
 	// STATS tab — live values (game.js setPhoneStats mirror)
 	UFUNCTION(BlueprintCallable, Category = "Velara|Phone")
 	void UpdateStats(int32 Cash, int32 HealthPct, int32 WantedStars, int32 GangKills)
@@ -80,6 +99,8 @@ private:
 	bool bMusicOn = true;
 	bool bSfxOn = true;
 	bool bHapticsOn = true;
+
+	bool bCallActive = false;
 
 	int32 StatsCash = 0;
 	int32 StatsHealth = 100;

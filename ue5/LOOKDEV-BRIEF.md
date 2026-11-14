@@ -1,5 +1,10 @@
 # Higgsfield Look-Dev Brief — VELARA UE5
 
+> **v0.9.0 UPDATE:** 6 lookdev refs READY hain — `ue5/Content/Refs/lookdev/`
+> (01-tower-glass … 06-vehicle-hero). Higgsfield prompts ab reference ke
+> taur par use ho sakte hain; Phase-1 materials inhi 6 refs ko target karega.
+
+
 Tumne Higgsfield ko **concept/visual refs** ke liye chuna. Ye prompts
 generate karo (Higgsfield/any AI video-image tool), best output ko
 `ue5/refs/` me daal dena (ya mujhe bhejo) — main wahi look materials me

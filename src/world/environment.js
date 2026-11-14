@@ -286,6 +286,46 @@ export function createEnvironment(scene, renderer) {
   }
   function toggleRain() { setRain(!state.raining); return state.raining; }
 
+  // ---------------- SEASONS (v0.9.0 — user demand: 4 full seasons) -------
+  // Har season = 1 poora day-cycle (10 min). Season sun/fog/tint/rain sab
+  // modulate karta hai; foliage tint game.js onSeasonChange se wire hota hai.
+  const SEASONS = ['spring', 'summer', 'monsoon', 'winter'];
+  const SEASON_MODS = {
+    spring:  { sun: 1.0,  fogMul: 1.0,  tint: 0xf4fff0, rainChance: 0.18, rainAmt: 0.45, label: 'Spring' },
+    summer:  { sun: 1.18, fogMul: 0.8,  tint: 0xfff0d4, rainChance: 0.02, rainAmt: 0.25, label: 'Summer' },
+    monsoon: { sun: 0.70, fogMul: 1.55, tint: 0xdde8f2, rainChance: 0.78, rainAmt: 1.0,  label: 'Monsoon' },
+    winter:  { sun: 0.86, fogMul: 1.75, tint: 0xe6f0fa, rainChance: 0.06, rainAmt: 0.3,  label: 'Winter' },
+  };
+  state.season = 'spring';
+  state.seasonT = 0;
+  state.seasonLen = 600;            // sec — 10 min / season
+  state.onSeasonChange = null;      // (name) => foliage/toast/phone
+  state._sunMod = 1; state._fogMod = 1;
+
+  function setSeason(name, silent) {
+    if (!SEASON_MODS[name] || name === state.season) return;
+    state.season = name;
+    state.seasonT = 0;
+    state._rainT = 4;               // naye season ka weather jaldi bata
+    if (!silent && state.onSeasonChange) state.onSeasonChange(name);
+  }
+
+  function seasonLabel() { return SEASON_MODS[state.season].label; }
+
+  function applySeason() {
+    const sm = SEASON_MODS[state.season];
+    // pichla mod hatao, naya laga do (compounding se bacho)
+    sun.intensity /= state._sunMod;
+    scene.fog.density /= state._fogMod;
+    state._sunMod = sm.sun; state._fogMod = sm.fogMul;
+    sun.intensity *= sm.sun;
+    scene.fog.density *= sm.fogMul;
+    // tint — convergent lerp (18% mix, base track karta rahega)
+    sun.color.lerp(_seasonTintC.setHex(sm.tint), 0.05);
+    scene.fog.color.lerp(_seasonTintC.setHex(sm.tint), 0.05);
+  }
+  const _seasonTintC = new THREE.Color();
+
   // color lerp helper
   const tmpA = new THREE.Color();
   function lerpColor(cTarget, a, b, t) {
@@ -340,6 +380,19 @@ export function createEnvironment(scene, renderer) {
   // ---------------- per-frame update ----------------
   function update(dt, camera) {
     skyUniforms.uTime.value += dt; // cloud drift
+
+    // ---- v0.9.0 SEASONS: advance + seasonal weather driver ----
+    state.seasonT += dt;
+    if (state.seasonT >= state.seasonLen) {
+      setSeason(SEASONS[(SEASONS.indexOf(state.season) + 1) % SEASONS.length]);
+    }
+    state._rainT = (state._rainT == null ? 14 : state._rainT) - dt;
+    if (state._rainT <= 0) {
+      state._rainT = 28 + Math.random() * 38;
+      const sm = SEASON_MODS[state.season];
+      state.raining = Math.random() < sm.rainChance;   // seasonal rain roll
+    }
+
     // day-night cycle auto-advance
     if (state.cycling) {
       state.cycleT += dt;
@@ -363,8 +416,11 @@ export function createEnvironment(scene, renderer) {
       if (transition === 1) rebuildEnvMap();
     }
 
-    // rain fade
-    const targetRain = state.raining ? 1 : 0;
+    applySeason();   // v0.9.0: sun/fog/tint season mods (mixture ke baad)
+
+    // rain fade (season strength se modulate)
+    const smRain = SEASON_MODS[state.season];
+    const targetRain = state.raining ? smRain.rainAmt : 0;
     state.rainAmount = lerp(state.rainAmount, targetRain, 1 - Math.exp(-dt * 1.5));
     rainMat.opacity = state.rainAmount * 0.42;
     rain.visible = state.rainAmount > 0.01;
@@ -394,6 +450,7 @@ export function createEnvironment(scene, renderer) {
 
   return {
     scene, sun, state, update, setTime, cycleTime, setRain, toggleRain, setPerf,
+    setSeason, seasonLabel, SEASONS,
     startCycle, clockString,
     get cycling() { return state.cycling; },
     get timeName() { return state.timeName; },

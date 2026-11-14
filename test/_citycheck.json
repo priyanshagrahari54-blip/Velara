@@ -48,7 +48,7 @@
    "ok": true,
    "detail": {
     "missing": [],
-    "tris": 847188,
+    "tris": 852276,
     "KitStd": 50,
     "KitGlass": 38,
     "KitGlow": 48
@@ -60,7 +60,7 @@
    "detail": {
     "found": true,
     "name": "KitGlow",
-    "day": 2.55,
+    "day": 1.48,
     "night": 3.06,
     "base": 3
    }

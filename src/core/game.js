@@ -17,6 +17,7 @@ import { Player } from '../gameplay/player.js';
 import { GameVehicle, VEHICLE_PRESETS, getVehiclePhysMat } from '../gameplay/vehicle.js';
 import { PoliceSystem } from '../gameplay/police.js';
 import { GangSystem } from '../gameplay/gang.js';
+import { CallSystem } from '../gameplay/calls.js';
 import { ParticleFX } from '../gameplay/vfx.js';
 import { spawnStreetProps } from '../gameplay/props.js';
 import { WeaponManager, WEAPONS } from '../gameplay/weapons.js';
@@ -118,8 +119,19 @@ export class VelaraGame {
     this.police.onWanted = (n) => this.ui.setWanted(n);
     this.police.onBusted = () => this._busted();
     this.gang = new GangSystem(this.scene, this.world, this);
-    this.gang.onKill = () => this.ui.haptic([30, 40, 30]);
+    this.gang.onKill = () => {
+      this.ui.haptic([30, 40, 30]);
+      this.calls.onThugKilled();
+    };
     this.vfx = new ParticleFX(this.scene);
+    this.calls = new CallSystem(this);
+    // seasons: foliage tint + toast + phone stats
+    this.env.state.onSeasonChange = (name) => {
+      this.foliage && this.foliage.setSeasonTint(name);
+      const ICONS = { spring: '🌸', summer: '☀️', monsoon: '🌧️', winter: '❄️' };
+      this.ui.toast(`${ICONS[name] || ''} ${this.env.seasonLabel()}`, false, 2600);
+    };
+    this.foliage.setSeasonTint(this.env.state.season);
     this.streetProps = spawnStreetProps(this.scene, this.world);
     this._shotsRead = 0;
     // designed GLB models: qa/tests skip (logic-only), g560 sirf active, normal staggered
@@ -158,6 +170,7 @@ export class VelaraGame {
       onToggleSfx: () => this.audio.toggleSfx(),
       onToggleHaptics: () => this.ui.hapticsOn = !this.ui.hapticsOn,
       onPhone: (open) => { this._phoneOpen = open; },
+      onCallHangup: () => this.calls.hangUp(),
     });
     this.missions = new MissionManager(this.ui);
     this.input = new InputManager({
@@ -528,6 +541,11 @@ export class VelaraGame {
   startGame() {
     this.audio.init();
     this.audio.loadSamples && this.audio.loadSamples();
+    this.ui.renderContacts(this.calls.contactsList(), (id) => {
+      const MAP = { vikram: 'missionDone', raja: 'thugKilled', mom: 'mom', unknown: 'wrong' };
+      if (this.calls.state === 'idle') this.calls.call(MAP[id] || 'wrong');
+      this.ui.togglePhone(false);
+    });
     if (this.audio.ctx && this.audio.ctx.state === 'suspended') this.audio.ctx.resume();
     this.ui.hideStart();
     this.ui.showHUD();
@@ -593,15 +611,20 @@ export class VelaraGame {
     if (this.state === 'playing') {
       this._update(dt);
       this.quality.frame(dt);
-      // ---- g560 dynamic resolution: 60fps ke peeche (0.38..0.55 auto) ----
-      if (this.quality.tier === 'g560' && this.state !== 'start') {
+      // ---- v0.9.0 dynamic resolution (DLSS-jaisa fallback): SAB tiers par.
+      // 60fps ke peeche render-scale apne aap girta/badhta hai — visuals
+      // (shadows/lights/view) kabhi downgrade nahi hote. Sirf sharpness
+      // adjust hoti hai, wapas recover bhi hoti hai.
+      if (this.state !== 'start') {
         this._dynT = (this._dynT || 0) + dt;
         if (this._dynT > 2) {
           this._dynT = 0;
           const f = this.quality.fps;
-          const cur = this._dynScale || this.quality.config.pixelRatio;
-          const nxt = Math.min(this.quality.config.pixelRatio,
-            Math.max(0.38, cur + (f < 52 ? -0.05 : f > 58 ? 0.05 : 0)));
+          const pr = this.quality.config.pixelRatio || 1;
+          const cur = this._dynScale || pr;
+          const floor = Math.min(pr, Math.max(0.30, pr * 0.55));   // pr<0.3 par floor=pr
+          const nxt = Math.min(pr,
+            Math.max(floor, cur + (f < 52 ? -0.05 : f > 58 ? 0.05 : 0)));
           if (Math.abs(nxt - cur) > 0.001) {
             this._dynScale = nxt;
             this.renderer.setPixelRatio(nxt);
@@ -823,6 +846,7 @@ export class VelaraGame {
 
     // --------------------------------------------- v0.8.0 systems
     this.gang.update(dt);
+    this.calls.update(dt);
     this.vfx.update(dt, this.camera);
     // police siren jab wanted hai (sample layer)
     this.audio.setSiren && this.audio.setSiren(this.police.wanted > 0 && this.police.units.length > 0, 0.45);
@@ -836,6 +860,9 @@ export class VelaraGame {
       }
     }
 
+    // --------------------------------------------- v0.9.0 camera auto-follow
+    this.cameraRig.followYaw = this.player.facing;
+    this.cameraRig.followSpeed = this.mode === 'foot' ? this.player.speed2d : 0;
     // ------------------------------------------------------------- camera
     this.cameraRig.update(dt);
 
@@ -843,7 +870,7 @@ export class VelaraGame {
     // g560: 8Hz redraw kaafi hai — 60fps ke liye canvas-2D cost kaato
     if (this.quality.config.minimap === false) return;   // emergency tier: poora band
     this._mmT = (this._mmT || 0) + dt;
-    if (this.quality.tier !== 'g560' || this._mmT > 0.125) {
+    if (this._mmT > 0.125) {   // v0.9.0: sab tiers par 8Hz (invisible CPU win)
       this._mmT = 0;
       this.ui.drawMinimap({
       extent: EXTENT,
@@ -880,6 +907,8 @@ export class VelaraGame {
         ['RANGE HITS', String(this.rangeHits || 0)],
         ['CRATES', String(this.cratesDestroyed || 0)],
         ['TIME OF DAY', (this.env && this.env.state && this.env.state.timeName) || '—'],
+        ['SEASON', this.env && this.env.seasonLabel ? this.env.seasonLabel() : '—'],
+        ['FPS', this.quality ? this.quality.fps.toFixed(0) : '—'],
       ]);
     }
   }

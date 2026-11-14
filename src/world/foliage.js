@@ -100,6 +100,11 @@ export function createFoliage(scene, opts = {}) {
 
   // ---------------- lawns (simple green planes, tufts upar se) ----------------
   const lawnMat = new THREE.MeshStandardMaterial({ color: 0x3a6b33, roughness: 0.95 });
+
+  // v0.9.0 SEASON TINT — har material ka base color yaad rakho, season
+  // badalne par usi ki hue lerp hoti hai (green fresh -> deep -> lush -> dull)
+  const _foliageMats = [lawnMat];
+  const _matBase = new Map();
   for (const L of lawns) {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(L.w, L.d), lawnMat);
     m.rotation.x = -Math.PI / 2;
@@ -143,6 +148,8 @@ export function createFoliage(scene, opts = {}) {
         g.applyMatrix4(o.matrixWorld);
         geos.push(g);
         mats.push(...(Array.isArray(o.material) ? o.material : [o.material]));
+        for (const mm of (Array.isArray(o.material) ? o.material : [o.material]))
+          if (mm && mm.color && !_foliageMats.includes(mm)) _foliageMats.push(mm);
       });
       if (!geos.length) return resolve(null);
       const geo = geos.length === 1 ? geos[0] : mergeGeometries(geos, true);
@@ -161,7 +168,27 @@ export function createFoliage(scene, opts = {}) {
   build('bush');
   build('tuft');
 
+  // v0.9.0: season -> foliage color (GLB load ke baad bhi call ho sakta hai)
+  function setSeasonTint(season) {
+    const TINTS = {
+      spring: 0x8fd45e,   // fresh bright green
+      summer: 0x4e8f3e,   // deep mature green
+      monsoon: 0x3f7d46,  // lush dark
+      winter: 0x6a7d5e,   // desaturated dull
+    };
+    const target = TINTS[season] || TINTS.summer;
+    const tgt = new THREE.Color(target);
+    for (const m of _foliageMats) {
+      if (!m.color) continue;
+      if (!_matBase.has(m)) _matBase.set(m, m.color.clone());
+      const base = _matBase.get(m);
+      // base ka hue preserve karke saturation/lerp season ki taraf (40%)
+      m.color.copy(base).lerp(tgt, 0.42);
+    }
+  }
+
   return {
+    setSeasonTint,
     counts: {
       street: plan.street.length, park: plan.park.length,
       bush: plan.bush.length, tuft: plan.tuft.length, lawns: lawns.length,

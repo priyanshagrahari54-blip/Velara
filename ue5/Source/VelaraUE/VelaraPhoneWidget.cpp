@@ -1,4 +1,26 @@
 #include "VelaraPhoneWidget.h"
 
-// UVelaraPhoneWidget — logic header me inline hai; cpp sirf module presence
-// + future native additions ke liye (UE UHT ko cpp chahiye hota hai).
+// UVelaraPhoneWidget — v0.9.0: call-flow native side (banner/ringtone WBP me).
+
+bool UVelaraPhoneWidget::AnswerCall()
+{
+	if (bCallActive) return false;
+	bCallActive = true;
+	OnCallStateChanged.Broadcast(true);
+	return true;
+}
+
+bool UVelaraPhoneWidget::DeclineCall()
+{
+	if (bCallActive) return false;
+	bCallActive = false;
+	OnCallStateChanged.Broadcast(false);
+	return true;
+}
+
+void UVelaraPhoneWidget::HangUp()
+{
+	if (!bCallActive) return;
+	bCallActive = false;
+	OnCallStateChanged.Broadcast(false);
+}

@@ -422,6 +422,28 @@ export class AudioEngine {
     }
   }
 
+  // v0.9.0 — phone ringtone (classic dual-tone, LFO square gate)
+  startRing() {
+    if (!this.ctx || this._ring) return;
+    const ctx = this.ctx;
+    const mix = ctx.createGain(); mix.gain.value = 0.11;
+    const o1 = ctx.createOscillator(); o1.frequency.value = 440;
+    const o2 = ctx.createOscillator(); o2.frequency.value = 480;
+    const lfo = ctx.createOscillator(); lfo.type = 'square'; lfo.frequency.value = 1 / 3.2;
+    const lfoG = ctx.createGain(); lfoG.gain.value = 0.055;
+    lfo.connect(lfoG); lfoG.connect(mix.gain);
+    o1.connect(mix); o2.connect(mix); mix.connect(this.sfxGain);
+    o1.start(); o2.start(); lfo.start();
+    this._ring = { o1, o2, lfo, mix };
+  }
+
+  stopRing() {
+    if (!this._ring) return;
+    const { o1, o2, lfo, mix } = this._ring;
+    try { o1.stop(); o2.stop(); lfo.stop(); mix.disconnect(); } catch (e) { /* already */ }
+    this._ring = null;
+  }
+
   footstep() {   // footstep — 4 variations random ("step" sequencer counter se clash)
     const n = 'footstep_0' + (1 + Math.floor(Math.random() * 4));
     this.sfx(n, 0.55, 0.9 + Math.random() * 0.2);

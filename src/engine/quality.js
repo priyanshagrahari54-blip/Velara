@@ -158,10 +158,14 @@ export class QualityManager {
     if (this.manual || this._cooldown > 0) return;
     const i = ORDER.indexOf(this.tier);
     const ceil = ORDER.indexOf(this._ceil || this.tier);
-    if (avg < 30 && i > 0) {                 // giravat — emergency floor tak
+    // v0.9.0: real devices (hardware GL) kabhi emergency tak nahi girein —
+    // wahan pixelRatio 0.24 + minimap off = user-visible downgrade. Software
+    // GL (QA swiftshader) hi emergency use kare.
+    const floorIdx = (this.glInfo && this.glInfo.sw) ? 0 : 1;
+    if (avg < 34 && i > floorIdx) {          // giravat — g560 floor tak (proactive)
       this._applyTier(ORDER[i - 1]);
       this._cooldown = 10;
-    } else if (avg > 50 && i < ceil) {       // wapas chadhavat — ceiling tak (hysteresis 30/50)
+    } else if (avg > 55 && i < ceil) {       // wapas chadhavat — ceiling tak (hysteresis 34/55)
       this._applyTier(ORDER[i + 1]);
       this._cooldown = 14;
     }
