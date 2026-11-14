@@ -1,0 +1,88 @@
+{
+ "errors": [],
+ "checks": [
+  {
+   "name": "city-kit state",
+   "ok": true,
+   "detail": {
+    "hasCity": true,
+    "collidable": 904,
+    "chunks": {
+     "total": 61,
+     "visible": 8
+    }
+   }
+  },
+  {
+   "name": "GLB material census",
+   "ok": true,
+   "detail": {
+    "missing": [],
+    "tris": 658524,
+    "Glass": 30,
+    "SignGlow": 57,
+    "Red": 47,
+    "Wood": 43,
+    "Screen": 43,
+    "Plate": 49
+   }
+  },
+  {
+   "name": "WinGlow night hook",
+   "ok": true,
+   "detail": {
+    "found": true,
+    "name": "SignGlow",
+    "day": 1.97,
+    "night": 3.06,
+    "base": 3
+   }
+  },
+  {
+   "name": "enterable door 1 (west shop)",
+   "ok": true,
+   "detail": {
+    "x": -49.16,
+    "z": 0,
+    "y": 0.63,
+    "inside": true
+   }
+  },
+  {
+   "name": "enterable door 2 (east shop)",
+   "ok": true,
+   "detail": {
+    "x": 41.16,
+    "z": -6,
+    "y": 0.63,
+    "inside": true
+   }
+  },
+  {
+   "name": "enterable door 3 (south shop)",
+   "ok": true,
+   "detail": {
+    "x": -8,
+    "z": -49.16,
+    "y": 0.63,
+    "inside": true
+   }
+  },
+  {
+   "name": "fps (quality counter)",
+   "ok": true,
+   "detail": {
+    "fps": 60,
+    "tier": "emergency"
+   }
+  },
+  {
+   "name": "console clean",
+   "ok": true,
+   "detail": {
+    "n": 0,
+    "first": []
+   }
+  }
+ ]
+}

@@ -1,7 +1,7 @@
 {
   "name": "velara-city-of-shadows",
-  "productName": "VELARA — City of Shadows",
-  "version": "0.3.0",
+  "productName": "VELARA \u2014 City of Shadows",
+  "version": "0.6.0",
   "description": "VELARA: ultra-realistic open-world city game prototype with full physics. Three.js + Cannon-es. Win7-compatible desktop build included.",
   "main": "desktop/main.cjs",
   "type": "module",

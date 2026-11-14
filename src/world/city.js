@@ -445,7 +445,8 @@ export function buildCity(scene, world, opts = {}) {
     return true;
   }
 
-  // ENTERABLE shop physics: front wall me 3.2m door gap (player andar ja sake)
+  // ENTERABLE shop physics: 3.2m door gap + HOLLOW interior room
+  // (factory interior layout se match: iw=14.8, idp=10.4, counter/shelves)
   function shopPhysics(x, z, ry) {
     const W = 16, D = 12, H = 7, DW = 3.2, DH = 3.05;
     const q = new CANNON.Quaternion();
@@ -454,14 +455,18 @@ export function buildCity(scene, world, opts = {}) {
     const put = (hx, hy, hz, ox, oy, oz) => {
       staticBox(hx, hy, hz, x + ox * c + oz * s, 0.18 + oy, z - ox * s + oz * c, q);
     };
-    // pichla mass + roof (front 0.7m strip ke alawa sab)
-    put(W / 2, H / 2, D / 2 - 0.35, 0, H / 2, -0.35);
-    // left/right front piers (glass wale span + corner piers cover)
+    // front piers + door lintel (gap 3.2m × 3.05m)
+    // NOTE: staticBox HALF-extents leta hai — pw/2 hi pass karo (QA bug #2)
     const pw = (W - DW) / 2 - 0.1;
-    put(pw, H / 2, 0.35, -(DW / 2 + pw / 2), H / 2, D / 2);
-    put(pw, H / 2, 0.35, (DW / 2 + pw / 2), H / 2, D / 2);
-    // door ke upar lintel (3.05m se upar band)
+    put(pw / 2, H / 2, 0.35, -(DW / 2 + pw / 2), H / 2, D / 2);
+    put(pw / 2, H / 2, 0.35, (DW / 2 + pw / 2), H / 2, D / 2);
     put(DW / 2 + 0.35, (H - DH) / 2, 0.35, 0, DH + (H - DH) / 2, D / 2);
+    // interior room — walls hollow (player andar ghus sake)
+    put(7.4, H / 2, 0.35, 0, H / 2, -5.2);       // back wall
+    put(0.35, H / 2, 5.2, -7.4, H / 2, 0);       // left wall
+    put(0.35, H / 2, 5.2, 7.4, H / 2, 0);        // right wall
+    put(1.8, 0.55, 0.4, 4.8, 0.55, 0.8);         // counter (right side)
+    put(6.15, 1.25, 0.28, 0, 1.25, -4.75);       // back shelf block
   }
 
   function placeEnterableShops() {
@@ -478,9 +483,15 @@ export function buildCity(scene, world, opts = {}) {
       // door world-pos (props yahan na lagein)
       const c = Math.cos(e.ry), s = Math.sin(e.ry);
       enterableDoors.push({ x: e.x + (D_LOCAL) * s, z: e.z + (D_LOCAL) * c });
+      // AABB (rotated footprint) — iske andar wale auto-lots SKIP honge warna
+      // shop lot-building ke andar dafan ho jaata hai (v0.6.0 QA bug)
+      const rot = Math.abs(Math.cos(e.ry)) < 0.5 ? 1 : 0;
+      const hx = (rot ? 6 : 8) + 1.2, hz = (rot ? 8 : 6) + 1.2;
+      enterableAABBs.push({ minX: e.x - hx, maxX: e.x + hx, minZ: e.z - hz, maxZ: e.z + hz });
     }
   }
   const D_LOCAL = 6.5;   // door thoda bahar tak ke props se doora rakhe
+  const enterableAABBs = [];
 
   function nearDoor(x, z) {
     for (const dd of enterableDoors) if (Math.hypot(x - dd.x, z - dd.z) < 5.5) return true;
@@ -530,15 +541,24 @@ export function buildCity(scene, world, opts = {}) {
   function applyKit(loaded) {
     kit = loaded;
     for (const gm of kit.glowMats) winGlowMats.push(gm);
+    // ENTERABLE shops PEHLE — phir overlapping auto-lots skip (door approach clear)
+    placeEnterableShops();
     const hasBuildings = kit.tower && kit.midrise && kit.shop;
     for (const L of pendingLots) {
-      ADD = L.chunk;
-      if (hasBuildings && placeBuildingLot(L)) continue;
+      const M9 = 9;   // lot-building max half-size approx
+      const blocked = enterableAABBs.some((a) =>
+        L.cx > a.minX - M9 && L.cx < a.maxX + M9 && L.cz > a.minZ - M9 && L.cz < a.maxZ + M9);
+      if (!blocked) {
+        ADD = L.chunk;
+        if (hasBuildings && placeBuildingLot(L)) continue;
+      }
+      // fallback / skipped-lot: procedural nahi — sirf missing-kit case mein
+      if (hasBuildings) continue;
       kitMode = false;   // ye lot procedural banega (GLB missing fallback)
+      ADD = L.chunk;
       addBuilding(L.cx, L.cz, L.w, L.d, L.h, L.variant, L.pad);
       kitMode = true;
     }
-    placeEnterableShops();
     placeStreetKit();
     ADD = scene;
   }

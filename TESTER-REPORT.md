@@ -139,3 +139,49 @@ full police (wanted/chase/BUSTED, spikes/heli baad mein), GTA5-level detail (~50
 **Known:** night screenshots sandbox par nahi ban paate (SwiftShader OOM — game theek,
 CI smoke green). Police steering-sign: +diff convention (A-key=left mapping se derived).
 Concept refs: refs/remaster-damage.jpg, remaster-police.jpg, remaster-street-detail.jpg.
+
+---
+
+## v0.6.0 — MIXED-CITY REMASTER (buildings + street kit + enterable shops)
+
+**Scope (user-locked):** Style B Mixed City (glass towers + concrete mid-rise + street shops),
+detail + ENTERABLE shops, street items FULL kit, fix-then-APK.
+
+### Kya bana
+1. **FACTORY (9 jobs, sab done)** — `make-buildings.py`: tower-glass (16×16×42 curtain-wall
+   + mullions + slabs + roof props), midrise-concrete (18×14×22, frames/ledges/balconies/
+   stairwell), shop-low (shopfront+awning+lit sign), **shop-enterable** (3.2m door gap +
+   interior: side/back walls, 3-shelf rows, counter, ceiling glow strips).
+   `make-streetkit.py`: hydrant / storm-drain / bench / parking-meter / sign-pole.
+   Sab bake-free (material colors + vertex AO + emissive), draco-6, 4.5–22KB each.
+2. **CITY INTEGRATION** — lots ab GLB se bharte hain (height rule: h≥30 tower, 14–30 midrise,
+   <14 shop; face-outward rotation; Y-scale variety). Chunk-merge buckets + castShadow.
+   WinGlow/sign/interior lights → `env.windowGlow` night hook (base intensity preserved).
+   Procedural fallback agar GLB missing ho.
+3. **ENTERABLE SHOPS (3, plaza ke teeno taraf)** — hollow-room physics: front piers+lintel
+   (door gap 3.2m × 3.05m), back/side walls, counter, shelf block. Overlapping auto-lots
+   AABB-skip. Door ke 5.5m me props nahi lagte.
+4. **STREET KIT PLACEMENT** — har block: 2 sign corners, 1–2 hydrants, 0–2 meters,
+   0–2 benches, 1–2 drains (deterministic seed). Physics poles static.
+
+### QA (v0.6.0) — `test/_citycheck.mjs` **8/8** + `mobile-qa.mjs` **11/11**, console 0 errors
+- city-kit: collidables 904, chunks 61/8 visible ✓
+- GLB census: Glass×30, SignGlow×57, Concrete, Red(hydrant)×47, Wood(bench)×43,
+  Screen(meter)×43, Plate(sign)×49 — total scene 658,524 tris ✓
+- WinGlow night hook: dusk 1.97 → night 3.06 (base 3 × windowGlow 1.7 × 0.6) ✓
+- **ENTERABLE doors (physics walk-in, teeno)**: player door se andar —
+  (−49.16, 0) / (41.16, −6) / (−8, −49.16) ✓
+- fps 60 (emergency tier, swiftshader) ✓
+- mobile regression: sky/hero/car/GAS 24kmh/STEER/FIRE/HUD — sab PASS ✓
+
+### Bugs jo QA ne pakde aur fix hue
+1. Enterable shops lot-buildings ke **andar dafan** the (door block) → AABB lot-skip.
+2. Pier boxes mein **full-width ko half-extent** pass hua (12.6m piers, door hi band)
+   → pw/2 fix.
+3. Interior **solid-fill** tha (room hi nahi tha) → hollow walls + counter + shelves.
+4. WinGlow material ka naam "SignGlow" hai (WinGlow object ka mat) — hook _glowBase
+   marker se robust.
+
+**Known:** swiftshader sandbox par game-time real-time se slow (transition pumps test me
+handle). Screenshot suite: shots/v060-air/shopfront/interior.png (pixel-verified, warm
+golden-hour, no neon). Police/damage v0.5.0 checks carry-over (code untouched).
