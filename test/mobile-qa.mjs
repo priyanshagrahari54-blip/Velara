@@ -21,6 +21,7 @@ const ctx = await browser.newContext({
   hasTouch: true, isMobile: true, deviceScaleFactor: 1,
 });
 const page = await ctx.newPage();
+page.setDefaultTimeout(90000);   // infra: slow swiftshader boxes (2GB) — 30s default kaat deta tha
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
 page.on('pageerror', (e) => errors.push('PAGEERROR: ' + e.message));
 

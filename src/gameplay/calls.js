@@ -46,6 +46,59 @@ const LINES = {
       'MOM: Sona mat bhoolna. Aur police se door rehna!',
     ],
   },
+  m5intro: {
+    contact: 'vikram',
+    lines: [
+      'VIKRAM: Range clear, crates todne ki bimari bhi hai... pasand aaya.',
+      'VIKRAM: Asli kaam shuru karte hain. Old Street ka mera drop point hai — marker dekho map pe.',
+      'VIKRAM: Aa jao, ladke. Cash wahin milta hai.',
+    ],
+  },
+  m6intro: {
+    contact: 'vikram',
+    lines: [
+      'VIKRAM: Ek package uthana hai — sona nahi hai, CASH.',
+      'VIKRAM: Raja ke log bhi uske peeche hain. 45 second hain tumhare paas. Marker follow karo.',
+    ],
+  },
+  m7intro: {
+    contact: 'vikram',
+    lines: [
+      'VIKRAM: Package safe. Par Raja ne mera ek aadmi maar diya is baarish mein.',
+      'VIKRAM: Old Market mein uske 3 thugs khade hain. Message pahunchao — 3 body. Samjhe?',
+    ],
+  },
+  m8intro: {
+    contact: 'vikram',
+    lines: [
+      'VIKRAM: Wahi gaadi jo tumne uchali hai — usme Vikram ka maal hai.',
+      'VIKRAM: Garage tak pahoncho. Gaadi KEVAL tab dega jab damage 45 se neeche hoga. SAMBHAL KE.',
+    ],
+  },
+  m9intro: {
+    contact: 'vikram',
+    lines: [
+      'VIKRAM: Raja gussa hai, police tumhare peeche. Achha hai — ab dono ek saath.',
+      'VIKRAM: 2 star chahiye mujhe — police ka dhyaan Raja se hatao. 45 second BACHO, phir paar lagao.',
+      'VIKRAM: Zinda wapas aao. Mujhe murda customer se koi matlab nahi.',
+    ],
+  },
+  m10intro: {
+    contact: 'raja',
+    lines: [
+      'RAJA: Bahut ho gaya tamasha. Ab seedhi baat.',
+      'RAJA: Old Market. Mere aakhri 6 aadmi. Aa jao agar jaan mein dum hai.',
+      'VIKRAM (background): Ye tera din hai, kid. FINISH HIM.',
+    ],
+  },
+  m10done: {
+    contact: 'vikram',
+    lines: [
+      'VIKRAM: ...chup hai poora market. Raja ka raaj khatam.',
+      'VIKRAM: Sheher mein ab ek hi naam gunguna jayega.',
+      'VIKRAM: Velara tera hai. Call rakhta hoon, kaam kabhi khatam nahi hote.',
+    ],
+  },
   wrong: {
     contact: 'unknown',
     lines: [
@@ -67,6 +120,15 @@ export class CallSystem {
     this._introDone = false;
     this._flavorT = 75 + Math.random() * 60;   // pehla flavor call ~1.5-2.5 min
     this.callLog = [];
+    this._queue = [];       // v0.10.0: busy waqt story calls yahan wait karti hain
+  }
+
+  /** v0.10.0 — story call busy aa gayi to queue (cap 8, FIFO). _end ke baad ring hogi. */
+  queue(scriptKey) {
+    if (!LINES[scriptKey]) return false;
+    if (this._queue.length >= 8) this._queue.shift();
+    this._queue.push(scriptKey);
+    return true;
   }
 
   /** kisi bhi jagah se naya call trigger (queue nahi — agar busy ho to skip) */
@@ -134,6 +196,9 @@ export class CallSystem {
   contactsList() { return CONTACTS; }
 
   update(dt) {
+    // v0.10.0: queued story call — idle hote hi ring
+    if (this.state === 'idle' && this._queue.length) this.call(this._queue.shift());
+
     // scheduled triggers
     if (this._pendingRaja !== undefined && this._pendingRaja > 0) {
       this._pendingRaja -= dt;

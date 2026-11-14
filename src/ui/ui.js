@@ -747,6 +747,18 @@ export class UI {
         c.beginPath(); c.arc(mx, mz, 5.5, 0, Math.PI * 2); c.fill();
       }
     }
+    if (data.marker) {
+      const [mx, mz] = toMap(data.marker.x, data.marker.z);
+      const pulse = 0.6 + 0.4 * Math.sin(performance.now() / 300);
+      c.fillStyle = '#ffce54';
+      c.beginPath(); c.arc(mx, mz, 7, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = `rgba(255,206,84,${0.7 * pulse})`;
+      c.lineWidth = 3;
+      c.beginPath(); c.arc(mx, mz, 13 + 4 * pulse, 0, Math.PI * 2); c.stroke();
+      c.fillStyle = '#ffce54';
+      c.font = 'bold 13px sans-serif';
+      c.fillText('★', mx - 6, mz - 16);
+    }
     const [px, pz] = toMap(player.x, player.z);
     c.save();
     c.translate(px, pz);
@@ -887,6 +899,17 @@ export class UI {
       c.strokeStyle = 'rgba(240,230,200,0.5)';
       c.lineWidth = 2;
       c.beginPath(); c.arc(mx, mz, 12, 0, Math.PI * 2); c.stroke();
+    }
+
+    // v0.10.0 mission marker (gold beacon dot + ring)
+    if (data.marker) {
+      const [mx, mz] = toMap(data.marker.x, data.marker.z);
+      const pulse = 0.6 + 0.4 * Math.sin(performance.now() / 300);
+      c.fillStyle = '#ffce54';
+      c.beginPath(); c.arc(mx, mz, 5, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = `rgba(255,206,84,${0.7 * pulse})`;
+      c.lineWidth = 2;
+      c.beginPath(); c.arc(mx, mz, 9 + 3 * pulse, 0, Math.PI * 2); c.stroke();
     }
 
     // player arrow

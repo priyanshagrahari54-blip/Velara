@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Components/InstancedStaticMeshComponent.h"
+#include "Materials/MaterialInterface.h"
 #include "VelaraCityBuilder.generated.h"
 
 /**
@@ -25,6 +26,12 @@ public:
 	// konse mesh kinds load karne hain (setup_assets.py ke import names)
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Velara")
 	TArray<FString> MeshKinds;
+
+	// v0.10.0 MATERIALS (Phase-1): lookdev refs se banaye gaye master
+	// materials — khali chhodo to mesh ke apne materials chalenge.
+	// Kind->Material mapping setup_assets.py se bhara jaata hai.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Velara|Materials")
+	TMap<FString, UMaterialInterface*> MaterialOverrides;
 
 	// three.js Y-rotation ka UE yaw sign flip (preview mein galat dikhe to toggle)
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Velara")

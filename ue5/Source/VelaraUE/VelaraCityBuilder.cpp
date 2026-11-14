@@ -34,6 +34,15 @@ UInstancedStaticMeshComponent* AVelaraCityBuilder::GetISMFor(const FString& Kind
 
 	UInstancedStaticMeshComponent* ISM = NewObject<UInstancedStaticMeshComponent>(this);
 	ISM->SetStaticMesh(Mesh);
+
+	// v0.10.0: material override (agar set hai) — har kind ka PBR look
+	if (UMaterialInterface** MatPtr = MaterialOverrides.Find(Kind))
+	{
+		if (UMaterialInterface* Mat = *MatPtr)
+		{
+			ISM->SetMaterial(0, Mat);
+		}
+	}
 	ISM->SetCollisionProfileName(TEXT("BlockAll"));
 	ISM->RegisterComponent();
 	ISM->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);

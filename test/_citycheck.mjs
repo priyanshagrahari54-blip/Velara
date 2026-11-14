@@ -21,7 +21,11 @@ const log = (name, ok, detail) => {
 const browser = await chromium.launch({
   args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox'],
 });
-const page = await browser.newPage({ viewport: { width: 844, height: 390 } });
+const page = await browser.newPage({
+  // QA_W/QA_H: 2GB sandbox boxes pe full-res city render wedge karta hai —
+  // low-res override se checks same rehte hain (tris/doors/glow resolution-independent).
+  viewport: { width: Number(process.env.QA_W || 844), height: Number(process.env.QA_H || 390) },
+});
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
 page.on('pageerror', (e) => errors.push('PAGEERROR: ' + e.message));
 
@@ -97,6 +101,11 @@ const glow = await page.evaluate(async () => {
     if (m && m.userData && m.userData._glowBase !== undefined) mat = m;
   });
   if (!mat) return { found: false };
+  // QA fix: game dusk pe boot hota hai — "day" baseline FORCE karo warna
+  // partial-glow se brittle delta (2.59 vs 3.06 wala fail). Hook waise kaam karta hai.
+  g.env.setTime('day');
+  g.env.update(3.0, g.camera);
+  g.city.update(0.05, g.env, null);
   const day = mat.emissiveIntensity;
   g.env.setTime('night');
   // swiftshader par game-time slow — env transition ko DIRECT pump karo (dt/2.5)

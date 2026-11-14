@@ -124,6 +124,9 @@ export class VelaraGame {
       this.calls.onThugKilled();
     };
     this.vfx = new ParticleFX(this.scene);
+
+    // ---- v0.10.0 MISSION MARKER (story beacon) ----
+    this.missionMarker = null;   // { x, z, group }
     this.calls = new CallSystem(this);
     // seasons: foliage tint + toast + phone stats
     this.env.state.onSeasonChange = (name) => {
@@ -524,6 +527,40 @@ export class VelaraGame {
     this.ui.toast('🔧 Vehicle recovered');
   }
 
+  setMissionMarker(x, z) {
+    this.clearMissionMarker();
+    const group = new THREE.Group();
+    const pillar = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.6, 1.6, 34, 18, 1, true),
+      new THREE.MeshBasicMaterial({
+        color: 0xffce54, transparent: true, opacity: 0.16,
+        blending: THREE.AdditiveBlending, depthWrite: false, fog: false, side: THREE.DoubleSide,
+      }));
+    pillar.position.y = 17;
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(4.4, 5.4, 28),
+      new THREE.MeshBasicMaterial({
+        color: 0xffce54, transparent: true, opacity: 0.5,
+        blending: THREE.AdditiveBlending, depthWrite: false, fog: false, side: THREE.DoubleSide,
+      }));
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.06;
+    group.add(pillar, ring);
+    group.position.set(x, 0, z);
+    this.scene.add(group);
+    this.missionMarker = { x, z, group };
+  }
+
+  clearMissionMarker() {
+    if (this.missionMarker) {
+      this.scene.remove(this.missionMarker.group);
+      this.missionMarker.group.traverse((o) => {
+        if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); }
+      });
+      this.missionMarker = null;
+    }
+  }
+
   _wasted() {
     this.health = 100;
     this.money = Math.max(0, this.money - 500);
@@ -782,7 +819,17 @@ export class VelaraGame {
       if (pp.t <= 0) this._panicPoints.splice(i, 1);
       else avoid.push({ x: pp.x, z: pp.z });
     }
-    this.traffic.update(dt, avoid);
+    this.traffic.update(dt, avoid, {
+      timeName: this.env.state.timeName,
+    });
+    if (!this.traffic.onHonk) {
+      this.traffic.onHonk = (x, z) => {
+        // doori ke hisaab se volume (player ke paas = zyada)
+        const d = Math.hypot(x - this.player.position.x, z - this.player.position.z);
+        const vol = Math.max(0.05, 0.5 - d * 0.006);
+        this.audio.sfx('horn', vol, 0.85 + Math.random() * 0.3);
+      };
+    }
 
     // ---------------------------------------------------- pedestrians
     this.peds.update(dt);
@@ -886,6 +933,7 @@ export class VelaraGame {
       targets: this.range.minimapData(),
       gang: this.gang.thugs,
       police: this.police.units,
+      marker: this.missionMarker ? { x: this.missionMarker.x, z: this.missionMarker.z } : null,
     });
     }
     // phone open ho to bada map + stats bhi refresh (8Hz hi sahi)
@@ -898,8 +946,10 @@ export class VelaraGame {
         pickups: this.city.pickups.map((p) => ({ x: p.x, z: p.z, taken: p.taken })),
         gang: this.gang.thugs,
         police: this.police.units,
+        marker: this.missionMarker ? { x: this.missionMarker.x, z: this.missionMarker.z } : null,
       });
       this.ui.setPhoneStats([
+        ['VERSION', 'v0.10.0 — CITY OF SHADOWS'],
         ['CASH', '₹ ' + this.money.toLocaleString('en-IN')],
         ['HEALTH', Math.max(0, Math.round(this.health)) + ' / 100'],
         ['WANTED', '★'.repeat(this.police.wanted) || 'CLEAN'],

@@ -197,6 +197,73 @@ golden-hour, no neon). Police/damage v0.5.0 checks carry-over (code untouched).
 
 ---
 
+## v0.10.0 — CITY OF SHADOWS: 10-mission story + traffic overhaul + UE Phase-1 materials (commit TBD)
+
+User: "Kro" — teeno tracks parallel: story missions + traffic overhaul + UE materials.
+
+### 1. STORY CAMPAIGN — MissionManager v2 (10 missions, GTA-style)
+| # | Mission | Objective | Reward |
+|---|---|---|---|
+| M1 | Welcome to Velara | 5 ₹-packages collect karo | ₹2,500 |
+| M2 | Test Driver | Car mein 110 km/h hold (1.2s) | ₹5,000 |
+| M3 | Havoc | Stunt plaza ke 8 crates todo | ₹7,500 |
+| M4 | Range Ready | Shooting range ke 6 targets | ₹10,000 |
+| M5 | The Meet | Vikram ka drop point (gold marker) | ₹12,000 |
+| M6 | Cash Run | Package uthao, 45s mein drop par wapas | ₹18,000 |
+| M7 | Market Message | Raja ke 3 thugs Old Market mein | ₹24,000 |
+| M8 | Hot Wheels | Garage deliver — damage < 45% | ₹30,000 |
+| M9 | Heat | 2★ → 45s BACHO → PAAR lagao | ₹40,000 |
+| M10 | The Reckoning | Raja ka squad — 6 thugs FINISH | ₹75,000 |
+| → | **FREE ROAM** | sheher tera hai | **total ₹2.24L+** |
+
+- **Gold mission marker**: beacon pillar + pulsing ring (AdditiveBlending,
+  fog:false — city ke upar dikhna chahiye), minimap + phone-map dono par
+  gold dot + ★. Geometry dispose clean (QA verified lifecycle).
+- **Story phone calls** (7 naye scripts): m5-m9 intro (Vikram fixer), m10intro
+  (Raja), **m10done finale (Vikram)**. Naya **call-queue system** — phone busy
+  pe story call queue hoti hai, _end ke baad ring (finale kabhi miss nahi).
+- QA fast-forward proof: M1→M10→FREE ROAM poori chain, ₹225,600 payout,
+  M9 sub-phases (2★ → 45s timer → evade), console 0 errors.
+
+### 2. TRAFFIC OVERHAUL
+- **Night density 55%** — raat mein sheher sulti hai (mesh cull + body.sleep,
+  din par wake).
+- **Car-ahead spacing** — same lane mein 15m aage gaadi dikhi to target speed
+  0.85× (ya 4.5m andar full stop). QA: follow car 14 → 11.9 km/h.
+- **HONK system** — 1.4s+ block hone par horn, cooldown 4-7s, pitch variance.
+  Game-side dist-falloff volume (door wali horn dheemi).
+
+### 3. UE5 PHASE-1 MATERIALS (Unreal track)
+- `setup_assets.py`: 4 parametric master materials — **M_Velara_GlassTower**
+  (0.28/0.22/0.15 base, rough 0.12, metal 0.85), M_Velara_Concrete, M_Velara_Shop,
+  M_Velara_Foliage.
+- `VelaraCityBuilder` (C++): `MaterialOverrides TMap` (EditAnywhere) —
+  GetISMFor mein `SetMaterial(0, Mat)`. Kind→material auto-assign
+  (tower-glass / midrise-concrete / shop-low / shop-enterable).
+
+### QA — LOCAL (fresh 2GB sandbox, swiftshader)
+| Suite | Result |
+|---|---|
+| **v10-check (naya)** | **7/7** — chain, payout, marker, traffic, honk, m10done, console |
+| v09-check (regression) | 11/11 |
+| mobile-qa (regression) | 11/11 |
+| g560-check (regression) | PASS — camY 3.01 pinned, draws 173, console 0 |
+| gang-phone-check (regression) | 8/8 |
+| citycheck (regression) | 8/8 — 852,276 tris, WinGlow day 0.11 → night 3.06 |
+
+- **Infra hardening (2GB box)**: v10-check rewrite — chunked evaluates +
+  240s watchdog + instant _noRender (single mega-evaluate 40s+ main-thread
+  block se box 2× wedge hua tha; orphan-chrome pkill recovery ~25 min).
+  `_run-safe.mjs` generic watchdog wrapper. mobile-qa default timeout 90s.
+  citycheck QA_W/QA_H env viewport (checks resolution-independent).
+- Fixes is round: M2 ka galat m5intro callKey hataya; `police.clear()` ab
+  `crimeCd` reset karta hai; calls queue (upar); WinGlow citycheck day-force.
+- **Shots (5)**: `shots/v100-marker.png` (gold beacon, 10.9k gold px),
+  `v100-story-call.png` (finale call card), `v100-night-traffic.png`,
+  `v100-phone-map-marker.png`, `v100-freeroam.png`.
+
+---
+
 ## v0.9.0 — GTA-5 PLAYTHROUGH ROUND: character + movement + tyres + HUD + seasons + calls + 60fps (commit TBD)
 
 **User feedback (seedha khel ke):** movement sluggish + player sirf ek direction

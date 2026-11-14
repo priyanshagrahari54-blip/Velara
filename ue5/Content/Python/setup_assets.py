@@ -136,6 +136,53 @@ if gang_cls:
 else:
     unreal.log_warning("[setup] VelaraGangAgent class nahi mili — C++ compile pehle")
 
+# ---------------------------------------------------- 3c. PBR materials (v0.10.0)
+# Lookdev refs (Content/Refs/lookdev) ke targets: 4 master materials,
+# parametric (textures Phase-2 mein Higgsfield-ref se).
+import unreal
+
+def make_master_mat(name, base_color, roughness, metallic):
+    path = "/Game/Materials/" + name
+    if unreal.EditorAssetLibrary.does_asset_exist(path):
+        return unreal.EditorAssetLibrary.load_asset(path)
+    m = unreal.AssetToolsHelpers.get_asset_tools().create_asset(name, "/Game/Materials", unreal.Material, unreal.MaterialFactoryNew())
+    # base color
+    bc = unreal.MaterialExpressionConstant3Vector(material=m)
+    bc.constant = unreal.LinearColor(base_color[0], base_color[1], base_color[2], 1.0)
+    m.get_editor_property("expressions").append(bc)
+    unreal.MaterialEditingLibrary.connect_material_property(bc, "", unreal.MaterialProperty.MP_BASE_COLOR)
+    # roughness
+    r = unreal.MaterialExpressionConstant(material=m)
+    r.r = roughness
+    m.get_editor_property("expressions").append(r)
+    unreal.MaterialEditingLibrary.connect_material_property(r, "", unreal.MaterialProperty.MP_ROUGHNESS)
+    # metallic
+    mt = unreal.MaterialExpressionConstant(material=m)
+    mt.r = metallic
+    m.get_editor_property("expressions").append(mt)
+    unreal.MaterialEditingLibrary.connect_material_property(mt, "", unreal.MaterialProperty.MP_METALLIC)
+    unreal.MaterialEditingLibrary.recompile_material(m)
+    return m
+
+mat_tower = make_master_mat("M_Velara_GlassTower", (0.28, 0.22, 0.15), 0.12, 0.85)     # 01-tower ref
+mat_concrete = make_master_mat("M_Velara_Concrete", (0.55, 0.54, 0.52), 0.88, 0.0)    # 02-midrise
+mat_shop = make_master_mat("M_Velara_Shop", (0.62, 0.5, 0.42), 0.8, 0.0)              # 03-street-shop
+mat_foliage = make_master_mat("M_Velara_Foliage", (0.16, 0.32, 0.14), 0.9, 0.0)       # seasons ref
+unreal.log("[setup] PBR master materials ready: glass/concrete/shop/foliage")
+
+# city builder par overrides lagao
+for actor in unreal.EditorLevelLibrary.get_all_level_actors():
+    if actor.get_class().get_name() == "VelaraCityBuilder":
+        overrides = {
+            "tower-glass": mat_tower,
+            "midrise-concrete": mat_concrete,
+            "shop-low": mat_shop,
+            "shop-enterable": mat_shop,
+        }
+        actor.set_editor_property("MaterialOverrides", overrides)
+        unreal.log("[setup] material overrides applied on VelaraCityBuilder")
+        break
+
 # ---------------------------------------------------------------- 4. save
 unreal.EditorLevelLibrary.save_current_level()
 unreal.EditorAssetLibrary.save_directory("/Game/Meshes", only_if_is_dirty=True)

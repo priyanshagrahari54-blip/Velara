@@ -82,6 +82,9 @@ export class TrafficSystem {
     this.world = world;
     this.spinWheels = opts.profile !== 'g560';
     this.trafficMat = new CANNON.Material('traffic');
+    // v0.10.0 overhaul state
+    this.onHonk = null;        // game audio hook (x, z) => sfx
+    this._activeTarget = 1;    // density 0..1 (time-of-day)
 
     const count = opts.profile === 'g560' ? 6 : 10; // g560: kam traffic
     for (let i = 0; i < count; i++) {
@@ -112,15 +115,30 @@ export class TrafficSystem {
 
       this.cars.push({
         axis, road, dir, lane, base, speed: base, mesh: g, body, wheels, yaw,
+        blockedT: 0, honkCd: 0, active: true,
       });
       scene.add(g);
     }
   }
 
-  update(dt, avoidList) {
+  update(dt, avoidList, ctx = {}) {
+    // v0.10.0 density: raat mein 55% traffic (city sula deti hai)
+    const wantActive = ctx.timeName === 'night' ? 0.55 : 1;
+    let activeCount = 0, targetCount = Math.ceil(this.cars.length * wantActive);
+    for (let i = 0; i < this.cars.length; i++) {
+      this.cars[i].active = i < targetCount;
+    }
+
     for (const car of this.cars) {
+      if (!car.active) {           // parked: sabse sasta cull
+        if (car.mesh.visible) { car.mesh.visible = false; car.body.sleep && car.body.sleep(); }
+        continue;
+      }
+      if (!car.mesh.visible) { car.mesh.visible = true; car.body.wakeUp && car.body.wakeUp(); }
+      activeCount++;
       const fx = car.axis === 'z' ? 0 : car.dir;
       const fz = car.axis === 'z' ? car.dir : 0;
+      car.honkCd = Math.max(0, car.honkCd - dt);
 
       // desired speed, slowing near the hero / player
       let target = car.base;
@@ -149,7 +167,32 @@ export class TrafficSystem {
           if (d > 1 && d < 18) target = Math.min(target, Math.max(0, (d - 9) * 0.55));
         }
       }
+      // v0.10.0 CAR-AHEAD SPACING: same road+dir+axis, aage wali car
+      for (const other of this.cars) {
+        if (other === car || !other.active) continue;
+        if (other.axis !== car.axis || other.dir !== car.dir || other.road !== car.road) continue;
+        const ox = other.body.position.x - car.body.position.x;
+        const oz = other.body.position.z - car.body.position.z;
+        const ahead = ox * fx + oz * fz;
+        const side = Math.abs(car.axis === 'z' ? ox : oz);
+        if (ahead > 0 && ahead < 15 && side < 2.4) {
+          target = Math.min(target, ahead < 4.5 ? 0 : other.speed * 0.85);
+        }
+      }
+
       car.speed += (target - car.speed) * Math.min(1, dt * 2.2);
+
+      // v0.10.0 HONK: block hoke khada hai to gusse mein horn
+      if (car.speed < car.base * 0.25 && target < car.base * 0.2) {
+        car.blockedT += dt;
+        if (car.blockedT > 1.4 && car.honkCd <= 0) {
+          car.blockedT = 0;
+          car.honkCd = 4 + Math.random() * 3;
+          if (this.onHonk) this.onHonk(car.body.position.x, car.body.position.z);
+        }
+      } else {
+        car.blockedT = Math.max(0, car.blockedT - dt * 2);
+      }
 
       // velocity servo (keeps them driving; collisions stay finite-mass)
       const k = Math.min(1, dt * 2);

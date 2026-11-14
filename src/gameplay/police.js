@@ -48,6 +48,7 @@ export class PoliceSystem {
     this._setWanted(0);
     this.bustedT = 0;
     this.evadeT = 0;
+    this.crimeCd = 0;   // v0.10.0: clean slate — clear ke baad crime turant register ho
   }
 
   _setWanted(n) {
