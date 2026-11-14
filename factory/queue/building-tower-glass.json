@@ -1,0 +1,12 @@
+{
+ "id": "building-tower-glass",
+ "script": "make-buildings.py",
+ "args": [
+  "tower-glass"
+ ],
+ "brief": "Glass tower 16x16 ~42m \u2014 curtain wall, mullions, slabs, roof props, canopy (Style B mixed city)",
+ "status": "pending",
+ "priority": 1,
+ "result": "factory/out/tower-glass.glb",
+ "worker": null
+}

@@ -1,0 +1,12 @@
+{
+ "id": "building-shop-low",
+ "script": "make-buildings.py",
+ "args": [
+  "shop-low"
+ ],
+ "brief": "Street-level shop 16x12 \u2014 shopfront glass + awning + lit sign + upper floor",
+ "status": "pending",
+ "priority": 1,
+ "result": "factory/out/shop-low.glb",
+ "worker": null
+}

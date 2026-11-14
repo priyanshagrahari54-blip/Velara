@@ -1,0 +1,12 @@
+{
+ "id": "streetkit-bench",
+ "script": "make-streetkit.py",
+ "args": [
+  "bench"
+ ],
+ "brief": "Park bench \u2014 wood slats + metal legs",
+ "status": "pending",
+ "priority": 1,
+ "result": "factory/out/bench.glb",
+ "worker": null
+}

@@ -1,0 +1,12 @@
+{
+ "id": "streetkit-sign",
+ "script": "make-streetkit.py",
+ "args": [
+  "sign"
+ ],
+ "brief": "Street sign \u2014 pole + plate",
+ "status": "pending",
+ "priority": 1,
+ "result": "factory/out/sign.glb",
+ "worker": null
+}

@@ -1,0 +1,12 @@
+{
+ "id": "streetkit-meter",
+ "script": "make-streetkit.py",
+ "args": [
+  "meter"
+ ],
+ "brief": "Parking meter \u2014 pole + head + glowing screen",
+ "status": "pending",
+ "priority": 1,
+ "result": "factory/out/meter.glb",
+ "worker": null
+}

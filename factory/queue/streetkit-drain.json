@@ -1,0 +1,12 @@
+{
+ "id": "streetkit-drain",
+ "script": "make-streetkit.py",
+ "args": [
+  "drain"
+ ],
+ "brief": "Storm drain \u2014 curb frame + grate slats",
+ "status": "pending",
+ "priority": 1,
+ "result": "factory/out/drain.glb",
+ "worker": null
+}

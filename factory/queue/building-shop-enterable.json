@@ -1,0 +1,12 @@
+{
+ "id": "building-shop-enterable",
+ "script": "make-buildings.py",
+ "args": [
+  "shop-enterable"
+ ],
+ "brief": "ENTERABLE shop \u2014 door gap + interior (shelves, counter, ceiling lights)",
+ "status": "pending",
+ "priority": 1,
+ "result": "factory/out/shop-enterable.glb",
+ "worker": null
+}

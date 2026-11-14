@@ -1,0 +1,12 @@
+{
+ "id": "streetkit-hydrant",
+ "script": "make-streetkit.py",
+ "args": [
+  "hydrant"
+ ],
+ "brief": "Fire hydrant (red, caps, dome)",
+ "status": "pending",
+ "priority": 1,
+ "result": "factory/out/hydrant.glb",
+ "worker": null
+}

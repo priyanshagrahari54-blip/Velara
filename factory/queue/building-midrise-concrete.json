@@ -1,0 +1,12 @@
+{
+ "id": "building-midrise-concrete",
+ "script": "make-buildings.py",
+ "args": [
+  "midrise-concrete"
+ ],
+ "brief": "Concrete mid-rise 18x14 ~22m \u2014 frames, ledges, balconies, stairwell",
+ "status": "pending",
+ "priority": 1,
+ "result": "factory/out/midrise-concrete.glb",
+ "worker": null
+}
