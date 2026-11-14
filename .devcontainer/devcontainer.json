@@ -1,30 +1,21 @@
 {
-  "name": "VELARA — Asset Factory (Blender headless + Node)",
+  "name": "VELARA City — by Priyansh",
   "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
-  "forwardPorts": [
-    3000,
-    5173
-  ],
-  "portsAttributes": {
-    "3000": {
-      "label": "VELARA game (vite dev)",
-      "onAutoForward": "openBrowser"
-    },
-    "5173": {
-      "label": "Vite default (alias)"
-    }
+  "features": {
+    "ghcr.io/devcontainers/features/python:1": { "version": "3.12" }
   },
-  "postCreateCommand": "bash .devcontainer/setup-blender.sh",
+  "postCreateCommand": "npm install",
+  "forwardPorts": [3000, 3002],
+  "portsAttributes": {
+    "3000": { "label": "Vite dev" },
+    "3002": { "label": "QA server" }
+  },
   "customizations": {
     "vscode": {
       "extensions": [
-        "dbaeumer.vscode-eslint"
+        "dbaeumer.vscode-eslint",
+        "ms-python.python"
       ]
-    }
-  },
-  "features": {
-    "ghcr.io/devcontainers/features/sshd:1": {
-      "version": "latest"
     }
   }
 }

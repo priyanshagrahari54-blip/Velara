@@ -5,6 +5,9 @@ name: Designer Team
 # jobs process karta hai aur results + queue-status khud commit karta hai.
 # - Manual: workflow_dispatch (jobs="velara-gt,pico-s" ya "next")
 # - 24/7: har 6 ghante cron khud queue uthata hai (pending ho to)
+# - v0.6.1: 4 PARALLEL WORKERS (user demand: "worker kam mat karna, badhao")
+#   dispatcher ek hi commit me claims assign karta hai, phir w0-w3 matrix
+#   me apne jobs render karke rebase-retry push karte hain.
 # - Commits [skip ci] ke saath — CI loops nahi
 # ---------------------------------------------------------------------------
 on:
@@ -15,21 +18,83 @@ on:
         required: false
         default: 'next'
       count:
-        description: '"next" ho to kitne jobs uthaon'
+        description: '"next" ho to kitne jobs uthaon (4 workers parallel)'
         required: false
-        default: '2'
+        default: '4'
   schedule:
     - cron: '17 */6 * * *'   # UTC — har 6 ghante queue check (24/7 team)
 
 permissions:
   contents: write
 
-concurrency:
-  group: designer-team
-  cancel-in-progress: false
-
 jobs:
-  blender-designer:
+  # ---------------- dispatcher: claims assign karke EK commit push karta hai
+  # (parallel claim-race yahin solve hota hai — workers sirf apne tags uthate)
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      total: ${{ steps.resolve.outputs.total }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Claim + assign workers
+        id: resolve
+        run: |
+          python3 - <<'PYRESOLVE'
+          import json, os, time, glob
+          sel = os.environ.get("SEL", "next")
+          cnt = int(os.environ.get("CNT", "4"))
+          files = sorted(glob.glob("factory/queue/*.json"))
+          jobs = [(f, json.load(open(f))) for f in files]
+          jobs = [(f, j) for f, j in jobs if j.get("script") != "make-img23d.py"]
+          now = time.time()
+          if sel and sel != "next":
+              ids = [x.strip() for x in sel.split(",") if x.strip()]
+              picked = [(f, j) for f, j in jobs
+                        if j["id"] in ids and j.get("status") in ("pending", "failed", "running")
+                        and (j.get("status") != "running" or now - j.get("claimed", 0) > 1800)]
+          else:
+              pend = [(f, j) for f, j in jobs
+                      if j.get("status") == "pending"
+                      or (j.get("status") == "running" and now - j.get("claimed", 0) > 1800)]
+              pend.sort(key=lambda fj: (fj[1].get("priority", 5), fj[1]["id"]))
+              picked = pend[:cnt]
+          WORKERS = ["w0", "w1", "w2", "w3"]
+          for i, (f, j) in enumerate(picked):
+              j["status"] = "running"
+              j["worker"] = WORKERS[i % len(WORKERS)]
+              j["claimed"] = int(now)
+              json.dump(j, open(f, "w"), indent=1)
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write("total=" + str(len(picked)) + "\n")
+          print("assigned:", [(j["id"], j["worker"]) for _, j in picked])
+          PYRESOLVE
+        env:
+          SEL: ${{ github.event.inputs.jobs || 'next' }}
+          CNT: ${{ github.event.inputs.count || '4' }}
+
+      - name: Commit claims
+        run: |
+          git config user.name "designer-bot"
+          git config user.email "actions@github.com"
+          git add factory/queue
+          git diff --cached --quiet && echo "koi claim nahi" && exit 0
+          git commit -q -m "designer(actions): claims [skip ci]"
+          git pull --rebase -q origin main || true
+          git push
+
+  # ---------------- render workers: w0-w3 parallel, apne-tag jobs chalate hain
+  render:
+    needs: dispatch
+    if: needs.dispatch.outputs.total != '0'
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        worker: [w0, w1, w2, w3]
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -51,50 +116,32 @@ jobs:
           fi
           /opt/blender/blender --version | head -1
 
-      - name: Resolve + claim jobs from queue
-        id: resolve
+      - name: Mere jobs? (worker tag se)
+        id: mine
         run: |
-          python3 - <<'PYRESOLVE'
-          import json, os, time, glob
-          sel = os.environ.get("SEL", "next")
-          cnt = int(os.environ.get("CNT", "2"))
-          picked = []
-          files = sorted(glob.glob("factory/queue/*.json"))
-          jobs = [(f, json.load(open(f))) for f in files]
-          jobs = [(f, j) for f, j in jobs if j.get("script") != "make-img23d.py"]  # img23d = artist workflow
-          now = time.time()
-          if sel and sel != "next":
-              ids = [x.strip() for x in sel.split(",") if x.strip()]
-              picked = [(f, j) for f, j in jobs
-                        if j["id"] in ids and j.get("status") in ("pending", "failed", "running")
-                        and (j.get("status") != "running" or now - j.get("claimed", 0) > 1800)]
-          else:
-              pend = [(f, j) for f, j in jobs
-                      if j.get("status") == "pending"
-                      or (j.get("status") == "running" and now - j.get("claimed", 0) > 1800)]
-              pend.sort(key=lambda fj: (fj[1].get("priority", 5), fj[1]["id"]))
-              picked = pend[:cnt]
-          for f, j in picked:
-              j["status"] = "running"
-              j["worker"] = "actions-cpu"
-              j["claimed"] = int(now)
-              json.dump(j, open(f, "w"), indent=1)
+          python3 - <<'PYMINE'
+          import json, glob, os
+          w = os.environ["W"]
+          mine = []
+          for f in sorted(glob.glob("factory/queue/*.json")):
+              j = json.load(open(f))
+              if j.get("worker") == w and j.get("status") == "running":
+                  mine.append(f"{f}|{j['script']}|{','.join(j.get('args', []))}|{j['id']}")
           with open(os.environ["GITHUB_OUTPUT"], "a") as out:
-              out.write("count=" + str(len(picked)) + "\n")
-              out.write("jobfiles<<RESOLVE_EOF\n")
-              for f, j in picked:
-                  out.write(f"{f}|{j['script']}|{','.join(j.get('args', []))}|{j['id']}\n")
-              out.write("RESOLVE_EOF\n")
-          print("claimed:", [(j["id"], j.get("status")) for _, j in picked])
-          PYRESOLVE
+              out.write("count=" + str(len(mine)) + "\n")
+              out.write("jobfiles<<MINE_EOF\n")
+              for m in mine:
+                  out.write(m + "\n")
+              out.write("MINE_EOF\n")
+          print(w, "->", len(mine), "jobs")
+          PYMINE
         env:
-          SEL: ${{ github.event.inputs.jobs || 'next' }}
-          CNT: ${{ github.event.inputs.count || '2' }}
+          W: ${{ matrix.worker }}
 
       - name: Run Blender jobs
-        if: steps.resolve.outputs.count != '0'
+        if: steps.mine.outputs.count != '0'
         run: |
-          echo "${{ steps.resolve.outputs.jobfiles }}" > /tmp/joblist.txt
+          echo "${{ steps.mine.outputs.jobfiles }}" > /tmp/joblist.txt
           : > /tmp/results.txt
           while IFS='|' read -r qf script args jid; do
             [ -z "$jid" ] && continue
@@ -108,8 +155,8 @@ jobs:
           done < /tmp/joblist.txt
           cat /tmp/results.txt
 
-      - name: Update queue + commit results
-        if: steps.resolve.outputs.count != '0'
+      - name: Update queue + commit results (rebase-retry x3)
+        if: steps.mine.outputs.count != '0'
         run: |
           if [ -f /tmp/results.txt ]; then
             while IFS='|' read -r qf jid status; do
@@ -130,8 +177,15 @@ jobs:
           fi
           git config user.name "designer-bot"
           git config user.email "actions@github.com"
-          git add factory/out factory/queue 2>/dev/null || true
-          git diff --cached --quiet && echo "nothing to commit" && exit 0
-          git commit -q -m "designer(actions): queue results update [skip ci]"
-          git pull --rebase -q origin main || echo "rebase conflict — DM baad mein merge karega"
-          git push || echo "push fail — agla run ya DM sambhalega"
+          for i in 1 2 3; do
+            git add factory/out factory/queue 2>/dev/null || true
+            git diff --cached --quiet && echo "nothing to commit" && exit 0
+            if git commit -q -m "designer(actions): queue results update [skip ci]" \
+               && git pull --rebase -q origin main && git push; then
+              exit 0
+            fi
+            echo "push/commit race — retry $i"
+            sleep 20
+            git rebase --abort 2>/dev/null || true
+          done
+          echo "push fail after retries — agla run sambhalega"
