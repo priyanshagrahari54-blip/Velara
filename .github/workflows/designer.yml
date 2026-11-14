@@ -101,6 +101,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: main          # CLAIMS commit (dispatch ne isi run me push kiya —
+                             # github.sha purana hota hai, wahi race tha)
 
       - name: Install Blender 4.5.16 (headless)
         run: |

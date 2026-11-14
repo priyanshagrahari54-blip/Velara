@@ -5,9 +5,9 @@
   "shop-enterable"
  ],
  "brief": "HI-DETAIL enterable shop \u2014 interior shelf ITEMS, display case, pendant",
- "status": "running",
+ "status": "pending",
  "priority": 1,
  "result": "factory/out/shop-enterable.glb",
- "worker": "w1",
+ "worker": null,
  "claimed": 1794657792
 }

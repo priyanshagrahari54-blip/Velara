@@ -5,9 +5,9 @@
   "midrise-concrete"
  ],
  "brief": "HI-DETAIL midrise ~20k+ tris \u2014 framed windows, baluster balconies, cornice",
- "status": "running",
+ "status": "pending",
  "priority": 1,
  "result": "factory/out/midrise-concrete.glb",
- "worker": "w0",
+ "worker": null,
  "claimed": 1794657792
 }
