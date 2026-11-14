@@ -197,7 +197,7 @@ golden-hour, no neon). Police/damage v0.5.0 checks carry-over (code untouched).
 
 ---
 
-## v0.10.0 — CITY OF SHADOWS: 10-mission story + traffic overhaul + UE Phase-1 materials (commit TBD)
+## v0.10.0 — CITY OF SHADOWS: 10-mission story + traffic overhaul + UE Phase-1 materials (commit 2d2e130 + APK 94b660f)
 
 User: "Kro" — teeno tracks parallel: story missions + traffic overhaul + UE materials.
 
@@ -264,7 +264,7 @@ User: "Kro" — teeno tracks parallel: story missions + traffic overhaul + UE ma
 
 ---
 
-## v0.9.0 — GTA-5 PLAYTHROUGH ROUND: character + movement + tyres + HUD + seasons + calls + 60fps (commit TBD)
+## v0.9.0 — GTA-5 PLAYTHROUGH ROUND: character + movement + tyres + HUD + seasons + calls + 60fps (commits aba258a + 19b7195 + APK aa242aa)
 
 **User feedback (seedha khel ke):** movement sluggish + player sirf ek direction
 mein face, character boxy, car ka tyre upar tairta hai, HUD buttons par
