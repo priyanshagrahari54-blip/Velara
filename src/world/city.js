@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { loadBuildingKit } from './buildings.js';
 
 // ---------------------------------------------------------------------------
 // VELARA city generator: roads, buildings, neon, lamps, props, pickups
@@ -362,6 +363,189 @@ export function buildCity(scene, world, opts = {}) {
   const rand = (a, b) => a + srand() * (b - a);
   const pick = (arr) => arr[Math.floor(srand() * arr.length)];
 
+  // ===================== v0.6.0 REMASTER: MIXED-CITY GLB KIT =====================
+  // Style B (user-picked): glass towers (core) + concrete mid-rise (ring) +
+  // street shops (street-facing) + ENTERABLE shops (plaza ke paas, 3) +
+  // street micro-detail (hydrant/drain/bench/meter/sign).
+  // GLBs async load hoti hain — tab tak lots pendingLots mein queue; milte hi
+  // place + physics + bucket-merge. Sab missing? procedural fallback purana.
+  let kit = null;
+  let kitMode = true;                 // false => purana procedural addBuilding
+  const pendingLots = [];             // {chunk, cx, cz, w, d, h, variant, pad}
+  const winGlowMats = [];             // env.windowGlow-hook (raat ki roshni)
+  const enterableDoors = [];          // world-space door positions (props exclusion)
+
+  const KIT_DIM = {                   // GLB nominal dims (m) — collision ke liye
+    tower: { w: 16, d: 16, h: 42 },
+    midrise: { w: 18, d: 14, h: 22 },
+    shop: { w: 16, d: 12, h: 7 },
+    shopIn: { w: 16, d: 12, h: 7 },
+  };
+
+  // ek GLB part ko (x,z,ry,sxz,sy) par rakho — bucket add() hi merge karega
+  function placePart(part, x, z, ry, sxz, sy, y = 0.18) {
+    const m = new THREE.Mesh(part.geometry, part.material);
+    const f = new THREE.Matrix4().makeRotationY(ry).setPosition(x, y, z)
+      .multiply(new THREE.Matrix4().makeScale(sxz, sy, sxz))
+      .multiply(part.matrix);
+    f.decompose(m.position, m.quaternion, m.scale);
+    m.castShadow = true;
+    m.receiveShadow = true;
+    m.userData.collidable = true;      // raycast (shots) buildings ko maare
+    add(m);
+  }
+
+  function placeGLB(kind, x, z, ry = 0, sxz = 1, sy = 1, y = 0.18) {
+    const src = kit && kit[kind];
+    if (!src) return false;
+    for (const p of src.parts) placePart(p, x, z, ry, sxz, sy, y);
+    return true;
+  }
+
+  // building ka face nearest street ki taraf (local +Z = door side)
+  function faceOutward(cx, cz) {
+    const dx = cx - Math.round(cx / CELL) * CELL;
+    const dz = cz - Math.round(cz / CELL) * CELL;
+    if (Math.abs(dx) > Math.abs(dz)) return dx > 0 ? Math.PI / 2 : -Math.PI / 2;
+    return dz > 0 ? 0 : Math.PI;
+  }
+
+  // lot -> GLB building type (height/footprint rules, Style B variety)
+  function placeBuildingLot(L) {
+    const { cx, cz, w, d, h } = L;
+    let kind, sy, sxz;
+    if (h >= 30) {
+      kind = 'tower';
+      sy = Math.max(0.85, Math.min(1.5, h / 42));
+      sxz = Math.max(0.72, Math.min(1.15, Math.min(w, d) / 16));
+    } else if (h >= 14) {
+      kind = 'midrise';
+      sy = Math.max(0.8, Math.min(1.4, h / 22));
+      sxz = Math.max(0.68, Math.min(1.05, Math.min(w / 18, d / 14)));
+    } else {
+      kind = 'shop';
+      sy = Math.max(0.9, Math.min(1.25, h / 7));
+      sxz = Math.max(0.62, Math.min(0.92, Math.min(w / 16, d / 12)));
+    }
+    const ry = faceOutward(cx, cz);
+    if (!placeGLB(kind, cx, cz, ry, sxz, sy)) return false;
+
+    const dim = KIT_DIM[kind];
+    const BW = dim.w * sxz, BD = dim.d * sxz, BH = dim.h * sy;
+    staticBox(BW / 2, BH / 2, BD / 2, cx, 0.18 + BH / 2, cz);
+
+    // aviation beacon tall towers par (GTA-style night blink)
+    if (kind === 'tower' && BH > 44) {
+      const b = new THREE.Mesh(new THREE.SphereGeometry(0.55, 8, 6), beaconMat);
+      b.position.set(cx, 0.18 + BH + 1.2, cz);
+      b.userData.noMerge = true;
+      add(b);
+      beacons.push(b);
+    }
+    return true;
+  }
+
+  // ENTERABLE shop physics: front wall me 3.2m door gap (player andar ja sake)
+  function shopPhysics(x, z, ry) {
+    const W = 16, D = 12, H = 7, DW = 3.2, DH = 3.05;
+    const q = new CANNON.Quaternion();
+    q.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), ry);
+    const c = Math.cos(ry), s = Math.sin(ry);
+    const put = (hx, hy, hz, ox, oy, oz) => {
+      staticBox(hx, hy, hz, x + ox * c + oz * s, 0.18 + oy, z - ox * s + oz * c, q);
+    };
+    // pichla mass + roof (front 0.7m strip ke alawa sab)
+    put(W / 2, H / 2, D / 2 - 0.35, 0, H / 2, -0.35);
+    // left/right front piers (glass wale span + corner piers cover)
+    const pw = (W - DW) / 2 - 0.1;
+    put(pw, H / 2, 0.35, -(DW / 2 + pw / 2), H / 2, D / 2);
+    put(pw, H / 2, 0.35, (DW / 2 + pw / 2), H / 2, D / 2);
+    // door ke upar lintel (3.05m se upar band)
+    put(DW / 2 + 0.35, (H - DH) / 2, 0.35, 0, DH + (H - DH) / 2, D / 2);
+  }
+
+  function placeEnterableShops() {
+    if (!kit || !kit.shopIn) return;
+    // plaza (0,0) ke teeno taraf — doors road/plaza ki taraf khulein
+    const SPOTS = [
+      { x: -50, z: 0, ry: Math.PI / 2 },   // block west-of-plaza, door +X (road x=-26)
+      { x: 42, z: -6, ry: -Math.PI / 2 },  // block east-of-plaza, door -X (road x=26)
+      { x: -8, z: -50, ry: 0 },            // block south-of-plaza, door +Z (road z=-26)
+    ];
+    for (const e of SPOTS) {
+      if (!placeGLB('shopIn', e.x, e.z, e.ry)) continue;
+      shopPhysics(e.x, e.z, e.ry);
+      // door world-pos (props yahan na lagein)
+      const c = Math.cos(e.ry), s = Math.sin(e.ry);
+      enterableDoors.push({ x: e.x + (D_LOCAL) * s, z: e.z + (D_LOCAL) * c });
+    }
+  }
+  const D_LOCAL = 6.5;   // door thoda bahar tak ke props se doora rakhe
+
+  function nearDoor(x, z) {
+    for (const dd of enterableDoors) if (Math.hypot(x - dd.x, z - dd.z) < 5.5) return true;
+    return false;
+  }
+
+  // street micro-detail: har block ke sidewalk corners/edges par
+  function placeStreetKit() {
+    if (!kit) return;
+    const prop = (kind, x, z, ry = 0, y = 0.18) => {
+      if (!kit[kind] || nearDoor(x, z)) return;
+      placeGLB(kind, x, z, ry, 1, 1, y);
+      return true;
+    };
+    const pole = (x, z, hy) => staticBox(0.14, hy, 0.14, x, 0.18 + hy, z);
+    for (let bx = 0; bx < GRID; bx++) {
+      for (let bz = 0; bz < GRID; bz++) {
+        const ox = -EXTENT + ROAD + bx * CELL, oz = -EXTENT + ROAD + bz * CELL;
+        const cx = ox + BLOCK / 2, cz = oz + BLOCK / 2;
+        ADD = chunkAt(cx, cz);
+        const isSpecial = (bx === 3 && bz === 3) || (bx === 5 && bz === 3);
+        const E = BLOCK / 2 - 0.9;   // curb se andar ek kadam
+
+        // corners: sign poles (diagonal pair)
+        if (prop('sign', cx - E, cz - E)) pole(cx - E, cz - E, 1.3);
+        if (prop('sign', cx + E, cz + E)) pole(cx + E, cz + E, 1.3);
+
+        if (!isSpecial) {
+          // hydrants: 2 mid-edges
+          if (srand() < 0.85) { const px = cx, pz = cz - E + 0.4; if (prop('hydrant', px, pz)) { staticBox(0.18, 0.45, 0.18, px, 0.63, pz); } }
+          if (srand() < 0.85) { const px = cx + E - 0.4, pz = cz; if (prop('hydrant', px, pz)) { staticBox(0.18, 0.45, 0.18, px, 0.63, pz); } }
+          // parking meters: shopfront edges
+          if (srand() < 0.75) { const px = cx - E + 0.6, pz = cz + rand(-7, 7); if (prop('meter', px, pz)) pole(px, pz, 0.6); }
+          if (srand() < 0.6) { const px = cx + rand(-8, 8), pz = cz - E + 0.6; if (prop('meter', px, pz)) pole(px, pz, 0.6); }
+          // benches: street-side seating
+          if (srand() < 0.65) { const px = cx + E - 0.7, pz = cz + rand(-7, 7); if (prop('bench', px, pz, Math.PI / 2)) staticBox(0.45, 0.3, 0.9, px, 0.55, pz); }
+          if (srand() < 0.5) { const px = cx + rand(-8, 8), pz = cz + E - 0.7; if (prop('bench', px, pz, 0)) staticBox(0.9, 0.3, 0.45, px, 0.55, pz); }
+          // storm drains: curb corners (intersection side, road level)
+          prop('drain', cx - E - 0.2, cz - E - 0.2, 0, 0.03);
+          if (srand() < 0.6) prop('drain', cx + E + 0.2, cz + E + 0.2, Math.PI, 0.03);
+        }
+      }
+    }
+    ADD = scene;
+  }
+
+  function applyKit(loaded) {
+    kit = loaded;
+    for (const gm of kit.glowMats) winGlowMats.push(gm);
+    const hasBuildings = kit.tower && kit.midrise && kit.shop;
+    for (const L of pendingLots) {
+      ADD = L.chunk;
+      if (hasBuildings && placeBuildingLot(L)) continue;
+      kitMode = false;   // ye lot procedural banega (GLB missing fallback)
+      addBuilding(L.cx, L.cz, L.w, L.d, L.h, L.variant, L.pad);
+      kitMode = true;
+    }
+    placeEnterableShops();
+    placeStreetKit();
+    ADD = scene;
+  }
+
+  // =================== /v0.6.0 mixed-city kit =====================
+
+
   // --------------------------------------------- dynamic props (declared early
   // because buildStuntPlaza runs inside the block loop below)
   const crates = [];
@@ -449,6 +633,8 @@ export function buildCity(scene, world, opts = {}) {
   }
 
   function addBuilding(cx, cz, w, d, h, variant, pad) {
+    // v0.6.0: GLB kit mode — lot queue karo, async apply hoga (fallback neeche)
+    if (kitMode) { pendingLots.push({ chunk: ADD, cx, cz, w, d, h, variant, pad }); return; }
     const y0 = 0.18;
     const geos = [];
     const bodyMat = facades[g560build ? variant & 1 : variant]; // g560: 2 materials
@@ -1133,6 +1319,8 @@ export function buildCity(scene, world, opts = {}) {
     for (const m of facades) m.emissiveIntensity = env.windowGlow;
     for (const m of podiumMats) m.emissiveIntensity = env.windowGlow * 1.1;
     skyMat.emissiveIntensity = env.windowGlow * 0.55;
+    // v0.6.0: factory WinGlow/sign/interior lights (base intensity preserved)
+    for (const gm of winGlowMats) gm.emissiveIntensity = (gm.userData._glowBase || 1) * env.windowGlow * 0.6;
     // beacons
     const blink = (Math.sin(t * 2.2) > 0.6) ? 1 : 0.06;
     for (const b of beacons) b.material.color.setRGB(1 * blink + 0.1, 0.15, 0.25);
@@ -1210,16 +1398,28 @@ export function buildCity(scene, world, opts = {}) {
   }
 
   // ---- finalize: per-(chunk, material, flags) merged meshes ----
-  for (const [chunkGrp, per] of buckets) {
-    for (const e of per.values()) {
-      const mm = new THREE.Mesh(mergeGeometries(e.geos, false), e.mat);
-      mm.castShadow = e.cast;
-      mm.receiveShadow = e.receive;
-      mm.userData.isDetail = e.mat === detailMat; // g560 LOD target
-      chunkGrp.add(mm);
-      if (e.col) collidableMeshes.push(mm);
+  // (kit async load hone tak wait — GLB placements bhi isi merge mein jaayenge)
+  const finalizeBuckets = () => {
+    for (const [chunkGrp, per] of buckets) {
+      for (const e of per.values()) {
+        const mm = new THREE.Mesh(mergeGeometries(e.geos, false), e.mat);
+        mm.castShadow = e.cast;
+        mm.receiveShadow = e.receive;
+        mm.userData.isDetail = e.mat === detailMat; // g560 LOD target
+        chunkGrp.add(mm);
+        if (e.col) collidableMeshes.push(mm);
+      }
     }
-  }
+  };
+
+  loadBuildingKit().then(applyKit).catch((e) => {
+    console.warn('[city] kit load failed — procedural fallback:', e);
+    kitMode = false;
+    for (const L of pendingLots) {
+      ADD = L.chunk;
+      addBuilding(L.cx, L.cz, L.w, L.d, L.h, L.variant, L.pad);
+    }
+  }).finally(finalizeBuckets);
 
   return {
     ROADS, EXTENT, collidableMeshes, update, resetProps, setPerf,
