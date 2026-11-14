@@ -201,6 +201,11 @@ export class GangSystem {
         }
       }
 
+      // v0.9.0 distance-cull — quality viewDist ke bahar thugs render nahi
+      // (g560/emergency par -42 draws; 140m par wo chhote dots hi hain)
+      const vd = g.quality && g.quality.config ? (g.quality.config.viewDist || 260) : 260;
+      t.mesh.visible = d < vd + 20;
+
       // sync hitbox
       t.body.position.set(t.mesh.position.x, 1.0, t.mesh.position.z);
     }

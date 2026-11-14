@@ -25,6 +25,13 @@ const r = await page.evaluate(() => {
         && Math.hypot(o.position.x, o.position.z) > 200) skylineVisible++;
   });
   for (let i = 0; i < 40; i++) g._update(1 / 60);
+  // v0.9.0: camera auto-follow idle-mein bhi yaw ghuma sakta hai — draw
+  // budget state-independent hona chahiye, isliye view pin karo.
+  g.cameraRig.yaw = Math.PI;
+  g.cameraRig.pitch = 0.15;
+  g.cameraRig.dist = 5.5;
+  g.cameraRig.autoFollow = false;
+  for (let i = 0; i < 3; i++) g._update(1 / 60);
   return {
     tier: g.quality.tier, label: g.quality.config.label,
     pixelRatio: g.renderer.getPixelRatio(),
