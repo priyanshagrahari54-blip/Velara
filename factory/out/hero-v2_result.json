@@ -1,0 +1,86 @@
+{
+ "job": "hero-v2",
+ "steps": [
+  {
+   "step": "reset_scene",
+   "ok": true,
+   "detail": "fresh scene"
+  },
+  {
+   "step": "materials",
+   "ok": true,
+   "detail": "12 PBR materials"
+  },
+  {
+   "step": "rig+mesh",
+   "ok": true,
+   "detail": "38 nodes (joint-pivot rig)"
+  },
+  {
+   "step": "pose",
+   "ok": true,
+   "detail": "A-pose relaxed"
+  },
+  {
+   "step": "tris",
+   "ok": true,
+   "detail": "5088 base tris"
+  },
+  {
+   "step": "render_studio",
+   "ok": true,
+   "detail": "/home/runner/work/Velara/Velara/factory/out/hero-v2_studio.png"
+  },
+  {
+   "step": "render_preview",
+   "ok": true,
+   "detail": "/home/runner/work/Velara/Velara/factory/out/hero-v2_preview.png"
+  },
+  {
+   "step": "export",
+   "ok": true,
+   "detail": "377248B glb + 243084B fbx"
+  }
+ ],
+ "tris": 5088,
+ "nodes": [
+  "ArmL",
+  "ArmR",
+  "Belt",
+  "BrowL",
+  "BrowR",
+  "Collar",
+  "CuffL",
+  "CuffR",
+  "ElbowL",
+  "ElbowR",
+  "EyeL",
+  "EyeR",
+  "FootL",
+  "FootR",
+  "ForeL",
+  "ForeR",
+  "Hair",
+  "HandL",
+  "HandR",
+  "Head",
+  "Hem",
+  "HeroRoot",
+  "Hips",
+  "KneeL",
+  "KneeR",
+  "LegL",
+  "LegR",
+  "Nose",
+  "ShinL",
+  "ShinR",
+  "ShoulderL",
+  "ShoulderR",
+  "SoleL",
+  "SoleR",
+  "Stubble",
+  "TeePanel",
+  "Torso",
+  "Zipper"
+ ]
+}
