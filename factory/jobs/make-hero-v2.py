@@ -135,10 +135,16 @@ def build_materials():
     return f"{len(M)} PBR materials"
 
 
+@step("reset_scene")
+def reset_scene():
+    # IMPORTANT: fresh scene PEHLE — materials iske BAAD bante hain (warna
+    # read_factory_settings sab data-blocks wipe kar deta hai → dead RNA).
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    return "fresh scene"
+
+
 @step("rig+mesh")
 def build_body():
-    bpy.ops.wm.read_factory_settings(use_empty=True)
-
     root = bpy.data.objects.new("HeroRoot", None)
     root.empty_display_size = 0.1
     bpy.context.collection.objects.link(root)
@@ -318,6 +324,7 @@ def export():
     return f"{os.path.getsize(GLB)}B glb + {os.path.getsize(FBX)}B fbx"
 
 
+reset_scene()
 build_materials()
 build_body()
 pose()
