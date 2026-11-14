@@ -182,6 +182,15 @@ detail + ENTERABLE shops, street items FULL kit, fix-then-APK.
 4. WinGlow material ka naam "SignGlow" hai (WinGlow object ka mat) — hook _glowBase
    marker se robust.
 
+5. **g560 DRAWS BUDGET FAIL → FIX** — CI HeavyQA ne pakda: GLB materials per-chunk
+   20+ buckets → 273 draws (budget 200). Fix: **load-time material consolidation**
+   (buildings.js) — har part ka base-color vertex-color mein bake, sab parts 3 shared
+   materials (KitStd/KitGlass/KitGlow) → g560 draws **159** ✓ (budget 200).
+   Bonus: KitGlow door-chunk LOD (95m+, fog-covered).
+
+**Post-consolidation QA rerun:** citycheck 8/8 + mobile-qa 11/11 + g560-check PASS
+(159 draws, 0 console errors).
+
 **Known:** swiftshader sandbox par game-time real-time se slow (transition pumps test me
 handle). Screenshot suite: shots/v060-air/shopfront/interior.png (pixel-verified, warm
 golden-hour, no neon). Police/damage v0.5.0 checks carry-over (code untouched).

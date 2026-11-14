@@ -1,10 +1,11 @@
 import { chromium } from 'playwright';
+const BASE = process.env.VELARA_BASE || 'http://localhost:3000';
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--no-sandbox'] });
 const page = await browser.newPage({ viewport: { width: 640, height: 360 } });
 const errors = [];
 page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
 page.on('pageerror', e => errors.push(String(e)));
-await page.goto('http://localhost:3000/?profile=g560', { waitUntil: 'networkidle' });
+await page.goto(BASE + '/?profile=g560', { waitUntil: 'networkidle' });
 await page.waitForTimeout(1500);
 await page.click('#v-play');
 await page.waitForTimeout(3500); // intro (2.4s) + settle

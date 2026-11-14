@@ -41,48 +41,6 @@ const st = await page.evaluate(() => {
 });
 log('city-kit state', st.hasCity && st.collidable > 20 && st.chunks && st.chunks.total > 20, st);
 
-// ---- 2. GLB material census ----
-const census = await page.evaluate(() => {
-  const g = window.velara;
-  const counts = {};
-  let tris = 0;
-  g.scene.traverse((o) => {
-    if (!o.isMesh || !o.geometry || !o.geometry.attributes.position) return;
-    const mats = Array.isArray(o.material) ? o.material : [o.material];
-    for (const m of mats) counts[m.name] = (counts[m.name] || 0) + 1;
-    tris += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3;
-  });
-  return { counts, tris: Math.round(tris) };
-});
-const need = ['Glass', 'SignGlow', 'Concrete', 'Red', 'Wood', 'Screen', 'Plate'];
-const missing = need.filter((n) => !census.counts[n]);
-log('GLB material census', missing.length === 0,
-  { missing, tris: census.tris, Glass: census.counts.Glass, SignGlow: census.counts.SignGlow,
-    Red: census.counts.Red, Wood: census.counts.Wood, Screen: census.counts.Screen, Plate: census.counts.Plate });
-
-// ---- 3. WinGlow night hook (material _glowBase marker se — SignGlow winquads) ----
-const glow = await page.evaluate(async () => {
-  const g = window.velara;
-  let mat = null;
-  g.scene.traverse((o) => {
-    if (mat || !o.isMesh) return;
-    const m = Array.isArray(o.material) ? o.material[0] : o.material;
-    if (m && m.userData && m.userData._glowBase !== undefined) mat = m;
-  });
-  if (!mat) return { found: false };
-  const day = mat.emissiveIntensity;
-  g.env.setTime('night');
-  // swiftshader par game-time slow — env transition ko DIRECT pump karo (dt/2.5)
-  g.env.update(3.0, g.camera);
-  g.city.update(0.05, g.env, null);
-  const night = mat.emissiveIntensity;
-  g.env.setTime('dusk');
-  g.env.update(3.0, g.camera);
-  g.city.update(0.05, g.env, null);
-  return { found: true, name: mat.name, day: +day.toFixed(2), night: +night.toFixed(2), base: mat.userData._glowBase };
-});
-log('WinGlow night hook', glow.found && glow.night > glow.day + 0.5, glow);
-
 // ---- 4. ENTERABLE shops: physics door-walk (teeno) ----
 const walk = await page.evaluate(() => {
   const g = window.velara;
@@ -110,6 +68,47 @@ const walk = await page.evaluate(() => {
 log('enterable door 1 (west shop)', walk.s1.inside, walk.s1);
 log('enterable door 2 (east shop)', walk.s2.inside, walk.s2)
 log('enterable door 3 (south shop)', walk.s3.inside, walk.s3);
+
+// ---- 2. GLB material census (consolidated: KitStd/KitGlass/KitGlow) ----
+const census = await page.evaluate(() => {
+  const g = window.velara;
+  const counts = {};
+  let tris = 0;
+  g.scene.traverse((o) => {
+    if (!o.isMesh || !o.geometry || !o.geometry.attributes.position) return;
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    for (const m of mats) counts[m.name] = (counts[m.name] || 0) + 1;
+    tris += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3;
+  });
+  return { counts, tris: Math.round(tris) };
+});
+const need = ['KitStd', 'KitGlass', 'KitGlow'];
+const missing = need.filter((n) => !census.counts[n]);
+log('GLB material census', missing.length === 0 && census.counts.KitStd > 20,
+  { missing, tris: census.tris, KitStd: census.counts.KitStd, KitGlass: census.counts.KitGlass, KitGlow: census.counts.KitGlow });
+
+// ---- 3. WinGlow night hook (material _glowBase marker se — SignGlow winquads) ----
+const glow = await page.evaluate(async () => {
+  const g = window.velara;
+  let mat = null;
+  g.scene.traverse((o) => {
+    if (mat || !o.isMesh) return;
+    const m = Array.isArray(o.material) ? o.material[0] : o.material;
+    if (m && m.userData && m.userData._glowBase !== undefined) mat = m;
+  });
+  if (!mat) return { found: false };
+  const day = mat.emissiveIntensity;
+  g.env.setTime('night');
+  // swiftshader par game-time slow — env transition ko DIRECT pump karo (dt/2.5)
+  g.env.update(3.0, g.camera);
+  g.city.update(0.05, g.env, null);
+  const night = mat.emissiveIntensity;
+  g.env.setTime('dusk');
+  g.env.update(3.0, g.camera);
+  g.city.update(0.05, g.env, null);
+  return { found: true, name: mat.name, day: +day.toFixed(2), night: +night.toFixed(2), base: mat.userData._glowBase };
+});
+log('WinGlow night hook', glow.found && glow.night > glow.day + 0.5, glow);
 
 // player wapas plaza par (aage ke tests ke liye)
 await page.evaluate(() => {

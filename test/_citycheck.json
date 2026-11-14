@@ -6,36 +6,11 @@
    "ok": true,
    "detail": {
     "hasCity": true,
-    "collidable": 904,
+    "collidable": 137,
     "chunks": {
      "total": 61,
      "visible": 8
     }
-   }
-  },
-  {
-   "name": "GLB material census",
-   "ok": true,
-   "detail": {
-    "missing": [],
-    "tris": 658524,
-    "Glass": 30,
-    "SignGlow": 57,
-    "Red": 47,
-    "Wood": 43,
-    "Screen": 43,
-    "Plate": 49
-   }
-  },
-  {
-   "name": "WinGlow night hook",
-   "ok": true,
-   "detail": {
-    "found": true,
-    "name": "SignGlow",
-    "day": 1.97,
-    "night": 3.06,
-    "base": 3
    }
   },
   {
@@ -66,6 +41,28 @@
     "z": -49.16,
     "y": 0.63,
     "inside": true
+   }
+  },
+  {
+   "name": "GLB material census",
+   "ok": true,
+   "detail": {
+    "missing": [],
+    "tris": 658524,
+    "KitStd": 50,
+    "KitGlass": 38,
+    "KitGlow": 48
+   }
+  },
+  {
+   "name": "WinGlow night hook",
+   "ok": true,
+   "detail": {
+    "found": true,
+    "name": "KitGlow",
+    "day": 2.24,
+    "night": 3.06,
+    "base": 3
    }
   },
   {

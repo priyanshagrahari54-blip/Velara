@@ -11,9 +11,9 @@
       "ok": true,
       "detail": {
         "topMean": [
-          90,
+          96,
           86,
-          108
+          106
         ]
       }
     },
@@ -28,8 +28,8 @@
         "sky": {
           "visible": true,
           "scale": 0.15473684210526314,
-          "top": "#342456",
-          "bottom": "#df924e"
+          "top": "#37265a",
+          "bottom": "#e8984e"
         },
         "vehicles": [
           {
@@ -222,7 +222,7 @@
       "name": "GAS pad → accelerates (3s game-time > 20 kmh)",
       "ok": true,
       "detail": {
-        "kmh": 24,
+        "kmh": 27,
         "fps": 60
       }
     },
@@ -230,8 +230,8 @@
       "name": "STEER pad → yaw change (>0.15 rad / 2s)",
       "ok": true,
       "detail": {
-        "yawDelta": 0.69,
-        "kmh": 0
+        "yawDelta": 1.39,
+        "kmh": 15
       }
     },
     {

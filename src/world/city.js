@@ -1420,12 +1420,15 @@ export function buildCity(scene, world, opts = {}) {
   // ---- finalize: per-(chunk, material, flags) merged meshes ----
   // (kit async load hone tak wait — GLB placements bhi isi merge mein jaayenge)
   const finalizeBuckets = () => {
+    const kitGlow = kit && kit.mats ? kit.mats.glow : null;
     for (const [chunkGrp, per] of buckets) {
       for (const e of per.values()) {
         const mm = new THREE.Mesh(mergeGeometries(e.geos, false), e.mat);
         mm.castShadow = e.cast;
         mm.receiveShadow = e.receive;
-        mm.userData.isDetail = e.mat === detailMat; // g560 LOD target
+        // g560 LOD targets: procedural details + door-chunk window-glow
+        // (95m+ par fog cover karta hai — draws bachte hain)
+        mm.userData.isDetail = e.mat === detailMat || e.mat === kitGlow;
         chunkGrp.add(mm);
         if (e.col) collidableMeshes.push(mm);
       }
