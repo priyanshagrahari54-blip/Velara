@@ -194,3 +194,43 @@ detail + ENTERABLE shops, street items FULL kit, fix-then-APK.
 **Known:** swiftshader sandbox par game-time real-time se slow (transition pumps test me
 handle). Screenshot suite: shots/v060-air/shopfront/interior.png (pixel-verified, warm
 golden-hour, no neon). Police/damage v0.5.0 checks carry-over (code untouched).
+
+---
+
+## v0.7.0-ue-alpha — UNREAL TRACK START + hi-detail factory + full audio + 4 workers
+
+**User decisions (ask_user):** Unreal Engine 5 · ~50k tris hi-detail buildings ·
+size unlimited · Higgsfield = concept-refs · FULL audio pass.
+
+### Infra
+1. **Designer 4 PARALLEL workers** — dispatch+matrix architecture (claims-race
+   solved via single claims commit). Bug found+fixed: workers github.sha (purana
+   tree) checkout kar rahe the → `ref: main`. Verified: 4 hi-detail jobs ~7min.
+2. **Codespaces** — .devcontainer/devcontainer.json (node+python, ports 3000/3002).
+3. **UE Team CI** — prelight (scaffold sanity, har push) + hosted Epic-container
+   cook (secret-gated, experimental) + **build-pc self-hosted runner** (primary,
+   unlimited minutes — README-UE.md me 10-min setup).
+4. Workspace budget fix: node_modules/.cache/.npm delete + git gc —
+   5,400+ files/850MB → **420 files/152MB**.
+
+### UE5 project scaffold (`ue5/`) — CI preflight PASS
+- C++ module: VelaraGameMode, VelaraCharacter (spring-arm chase cam, sprint),
+  **VelaraCityBuilder** (city_layout.json → InstancedStaticMesh, yaw-flip toggle).
+- `gen-city-layout.py`: 102 buildings (38 tower/22 midrise/39 shop/3 enterable)
+  + 360 props — deterministic, three.js rules par based.
+- `setup_assets.py` (editor python): FBX+WAV import, VelaraMain level
+  (sun/sky/atmosphere/ground/city/playerstart) — EK command setup.
+- **FULL audio pack (15 WAVs, 4.4MB)**: engine idle/mid/high loops, skid,
+  crash hard/soft, siren wail, horn, footsteps ×4, city ambience, pickup, ui.
+- Higgsfield lookdev brief: `ue5/LOOKDEV-BRIEF.md` (7 prompts — user banayega).
+
+### Hi-detail factory render (4 workers parallel)
+| Asset | tris (pehle) | FBX | GLB |
+|---|---|---|---|
+| tower-glass | **30,932** (852) | 382KB | 366KB |
+| midrise-concrete | 4,184 (912) | 76KB | 59KB |
+| shop-low | 828 (192) | 36KB | 23KB |
+| shop-enterable | 1,508 (300) | 47KB | 38KB |
+
+**Pending (agla round):** hi-detail GLBs ko three.js track mein swap + mobile-qa
+regression; UE Phase-1 materials (Higgsfield refs ke baad); Chaos vehicle Phase-2.
