@@ -5,8 +5,9 @@
   "shop-low"
  ],
  "brief": "Street-level shop 16x12 \u2014 shopfront glass + awning + lit sign + upper floor",
- "status": "pending",
+ "status": "done",
  "priority": 1,
  "result": "factory/out/shop-low.glb",
- "worker": null
+ "worker": "actions-cpu",
+ "claimed": 1794620824
 }

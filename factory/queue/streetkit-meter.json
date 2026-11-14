@@ -5,8 +5,9 @@
   "meter"
  ],
  "brief": "Parking meter \u2014 pole + head + glowing screen",
- "status": "pending",
+ "status": "done",
  "priority": 1,
  "result": "factory/out/meter.glb",
- "worker": null
+ "worker": "actions-cpu",
+ "claimed": 1794620824
 }

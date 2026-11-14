@@ -5,8 +5,9 @@
   "midrise-concrete"
  ],
  "brief": "Concrete mid-rise 18x14 ~22m \u2014 frames, ledges, balconies, stairwell",
- "status": "pending",
+ "status": "done",
  "priority": 1,
  "result": "factory/out/midrise-concrete.glb",
- "worker": null
+ "worker": "actions-cpu",
+ "claimed": 1794620824
 }

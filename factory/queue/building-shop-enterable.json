@@ -5,8 +5,9 @@
   "shop-enterable"
  ],
  "brief": "ENTERABLE shop \u2014 door gap + interior (shelves, counter, ceiling lights)",
- "status": "pending",
+ "status": "done",
  "priority": 1,
  "result": "factory/out/shop-enterable.glb",
- "worker": null
+ "worker": "actions-cpu",
+ "claimed": 1794620824
 }

@@ -5,8 +5,9 @@
   "drain"
  ],
  "brief": "Storm drain \u2014 curb frame + grate slats",
- "status": "pending",
+ "status": "done",
  "priority": 1,
  "result": "factory/out/drain.glb",
- "worker": null
+ "worker": "actions-cpu",
+ "claimed": 1794620824
 }

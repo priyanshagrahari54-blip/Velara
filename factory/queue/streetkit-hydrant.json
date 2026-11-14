@@ -5,8 +5,9 @@
   "hydrant"
  ],
  "brief": "Fire hydrant (red, caps, dome)",
- "status": "pending",
+ "status": "done",
  "priority": 1,
  "result": "factory/out/hydrant.glb",
- "worker": null
+ "worker": "actions-cpu",
+ "claimed": 1794620824
 }
